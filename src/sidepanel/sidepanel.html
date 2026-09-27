@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="sidepanel-container">
+    <div class="header">
+      <h2>OCR History</h2>
+      <div class="header-actions">
+        <button id="clear-history-btn" title="Clear History">🗑️</button>
+      </div>
+    </div>
+    <div class="filters">
+      <input type="text" id="search-input" placeholder="Search text...">
+      <select id="filter-language">
+        <option value="all">All Languages</option>
+        <option value="eng">English</option>
+        <option value="hin">Hindi</option>
+        <option value="spa">Spanish</option>
+        <option value="fra">French</option>
+        <option value="jpn">Japanese</option>
+      </select>
+    </div>
+    <div id="history-list" class="history-list">
+      <div class="empty-state">No OCR results yet. Use Ctrl+Shift+X or right-click an image.</div>
+    </div>
+    <div id="detail-panel" class="detail-panel hidden">
+      <button id="back-btn">← Back</button>
+      <div id="detail-text" class="detail-text"></div>
+      <button id="copy-detail-btn" class="primary">Copy Text</button>
+    </div>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

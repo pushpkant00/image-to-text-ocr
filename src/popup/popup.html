@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Image to Text OCR</h1>
+    <div class="actions">
+      <button id="ocr-select-btn" class="primary">Select Area (Ctrl+Shift+X)</button>
+      <label class="file-btn">OCR Image File
+        <input type="file" id="ocr-file" accept="image/*" hidden>
+      </label>
+    </div>
+    <div id="paste-hint" class="paste-hint">Tip: paste a screenshot here with Ctrl+V</div>
+    <div id="ocr-status" class="status hidden"></div>
+    <div class="settings">
+      <label>Language <span class="note">(English works offline; others download once)</span>:</label>
+      <select id="language-select">
+        <option value="eng" selected>English (offline)</option>
+        <option value="hin">Hindi</option>
+        <option value="spa">Spanish</option>
+        <option value="fra">French</option>
+        <option value="deu">German</option>
+        <option value="jpn">Japanese</option>
+        <option value="chi_sim">Chinese (Simplified)</option>
+      </select>
+    </div>
+    <div class="settings">
+      <label><input type="checkbox" id="remove-breaks" checked> Clean up line breaks</label>
+      <label><input type="checkbox" id="merge-spaces" checked> Merge extra spaces</label>
+    </div>
+    <div id="last-result" class="result-box hidden">
+      <h3>Last Result <button id="copy-last-btn" class="link-btn">Copy</button></h3>
+      <pre id="last-text"></pre>
+    </div>
+    <button id="view-history-btn" class="secondary">Open History Panel</button>
+    <p class="shortcut">Right-click any image → “Extract text from this image”</p>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
