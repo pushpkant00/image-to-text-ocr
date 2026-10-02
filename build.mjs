@@ -12,7 +12,7 @@ mkdirSync(dist, { recursive: true });
 cpSync(join(root, 'manifest.json'), join(dist, 'manifest.json'));
 
 // folders preserved 1:1 (manifest references these dist-relative paths)
-for (const dir of ['background', 'content', 'ocr', 'offscreen', 'popup', 'sidepanel']) {
+for (const dir of ['background', 'content', 'ocr', 'offscreen', 'popup', 'sidepanel', 'shared']) {
   const actualSrc = join(root, 'src', dir);
   if (existsSync(actualSrc)) cpSync(actualSrc, join(dist, dir), { recursive: true });
 }

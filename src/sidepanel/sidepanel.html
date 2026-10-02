@@ -12,6 +12,32 @@
         <button id="clear-history-btn" title="Clear History">🗑️</button>
       </div>
     </div>
+    <div class="account-card" id="account-card">
+      <div id="signed-out-view">
+        <div class="account-title">Sign in to sync your history</div>
+        <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
+        <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
+        <div id="auth-status" class="auth-status hidden"></div>
+        <div class="account-actions">
+          <button id="sign-in-btn" class="primary">Sign In</button>
+          <button id="sign-up-btn" class="secondary">Create Account</button>
+        </div>
+        <div id="config-hint" class="auth-hint hidden">
+          Cloud sync is off — add your Firebase config in <code>src/shared/firebase-config.js</code>.
+        </div>
+      </div>
+      <div id="signed-in-view" class="hidden">
+        <div class="account-user">
+          <span id="account-avatar" class="avatar">?</span>
+          <span id="account-email" class="account-email"></span>
+        </div>
+        <div id="sync-status" class="auth-status hidden"></div>
+        <div class="account-actions">
+          <button id="sync-btn" class="primary">Sync Now</button>
+          <button id="sign-out-btn" class="secondary">Sign Out</button>
+        </div>
+      </div>
+    </div>
     <div class="filters">
       <input type="text" id="search-input" placeholder="Search text...">
       <select id="filter-language">

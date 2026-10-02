@@ -10,8 +10,123 @@ document.addEventListener('DOMContentLoaded', () => {
   const backBtn = $('back-btn');
   const headerTitle = document.querySelector('.header h2');
 
+  // account / cloud sync
+  const accountCard = document.getElementById('account-card');
+  const signedOutView = document.getElementById('signed-out-view');
+  const signedInView = document.getElementById('signed-in-view');
+  const authEmail = document.getElementById('auth-email');
+  const authPassword = document.getElementById('auth-password');
+  const authStatus = document.getElementById('auth-status');
+  const signInBtn = document.getElementById('sign-in-btn');
+  const signUpBtn = document.getElementById('sign-up-btn');
+  const configHint = document.getElementById('config-hint');
+  const accountAvatar = document.getElementById('account-avatar');
+  const accountEmail = document.getElementById('account-email');
+  const syncStatus = document.getElementById('sync-status');
+  const syncBtn = document.getElementById('sync-btn');
+  const signOutBtn = document.getElementById('sign-out-btn');
+
   let history = [];
   let currentDetail = null;
+  let busy = false;
+
+  function setStatus(el, message, kind = '') {
+    el.textContent = message;
+    el.classList.remove('hidden', 'error', 'success');
+    if (message) el.classList.add(kind);
+    else el.classList.add('hidden');
+  }
+
+  function setBusy(value) {
+    busy = value;
+    [signInBtn, signUpBtn, syncBtn, signOutBtn].forEach((b) => (b.disabled = value));
+  }
+
+  async function sendMessage(message) {
+    return (await chrome.runtime.sendMessage(message)) || { ok: false, error: 'No response from background' };
+  }
+
+  async function refreshAccount() {
+    const res = await sendMessage({ type: 'AUTH_STATE' });
+    const user = res?.ok ? res.user : null;
+    signedOutView.classList.toggle('hidden', Boolean(user));
+    signedInView.classList.toggle('hidden', !user);
+    configHint.classList.toggle('hidden', !(res?.ok && !res.configured));
+    if (user) {
+      accountEmail.textContent = user.email || '';
+      accountAvatar.textContent = (user.email || '?').trim().charAt(0).toUpperCase() || '?';
+    }
+    return user;
+  }
+
+  async function syncNow(showStatus = true) {
+    const res = await sendMessage({ type: 'SYNC_HISTORY' });
+    if (res?.ok && showStatus) {
+      const { total = 0, uploaded = 0 } = res.stats || {};
+      setStatus(syncStatus, `Synced · ${total} item${total === 1 ? '' : 's'}${uploaded ? ` · ${uploaded} uploaded` : ''}`, 'success');
+    } else if (!res?.ok && showStatus) {
+      setStatus(syncStatus, res?.error || 'Sync failed', 'error');
+    }
+    if (res?.ok) await loadHistory();
+    return res?.ok;
+  }
+
+  async function handleAuth(kind) {
+    if (busy) return;
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    if (!email || !password) {
+      setStatus(authStatus, 'Enter your email and password.', 'error');
+      return;
+    }
+    if (kind === 'AUTH_SIGN_UP' && password.length < 6) {
+      setStatus(authStatus, 'Password must be at least 6 characters.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      setStatus(authStatus, kind === 'AUTH_SIGN_UP' ? 'Creating account…' : 'Signing in…');
+      const res = await sendMessage({ type: kind, email, password });
+      if (!res?.ok) {
+        setStatus(authStatus, res?.error || 'Sign-in failed', 'error');
+        return;
+      }
+      setStatus(authStatus, '');
+      authPassword.value = '';
+      await refreshAccount();
+      setStatus(syncStatus, 'Merging history…');
+      await syncNow(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  signInBtn.addEventListener('click', () => handleAuth('AUTH_SIGN_IN'));
+  signUpBtn.addEventListener('click', () => handleAuth('AUTH_SIGN_UP'));
+  authPassword.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleAuth('AUTH_SIGN_IN');
+  });
+  syncBtn.addEventListener('click', async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      setStatus(syncStatus, 'Syncing…');
+      await syncNow(true);
+    } finally {
+      setBusy(false);
+    }
+  });
+  signOutBtn.addEventListener('click', async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await sendMessage({ type: 'AUTH_SIGN_OUT' });
+      setStatus(syncStatus, '');
+      await refreshAccount();
+    } finally {
+      setBusy(false);
+    }
+  });
 
   async function loadHistory() {
     const res = await chrome.runtime.sendMessage({ type: 'GET_HISTORY' });
@@ -88,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     detailPanel.classList.remove('hidden');
     historyList.style.display = 'none';
     document.querySelector('.filters').style.display = 'none';
+    accountCard.style.display = 'none';
     headerTitle.textContent = `Result · ${entry.confidence || 0}% · ${entry.language || ''}`;
   }
 
@@ -95,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     detailPanel.classList.add('hidden');
     historyList.style.display = 'block';
     document.querySelector('.filters').style.display = 'flex';
+    accountCard.style.display = '';
     headerTitle.textContent = 'OCR History';
     currentDetail = null;
   }
@@ -120,4 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   loadHistory();
+  refreshAccount().then((user) => {
+    if (user) syncNow(false).catch(() => {});
+  });
 });

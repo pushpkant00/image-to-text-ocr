@@ -1,6 +1,6 @@
 # Image to Text OCR — Chrome Extension
 
-Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, right-click an image, or paste a screenshot — the text is recognized **on your device** and copied to your clipboard. No accounts, no servers, no API keys.
+Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, right-click an image, or paste a screenshot — the text is recognized **on your device** and copied to your clipboard. OCR itself is fully offline; an optional account lets you sync history across devices.
 
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue) ![Offline OCR](https://img.shields.io/badge/OCR-on--device-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
@@ -13,6 +13,7 @@ Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, 
 - **Side-panel history** — searchable, per-language filter, confidence scores, delete/clear
 - **100% offline English OCR** — Tesseract.js + language data bundled, nothing ever leaves your machine
 - **Multi-language** — English works offline; other languages download their model once on first use
+- **Optional login & cloud history** — sign in from the side panel to merge your history with a Firebase account across devices (off by default)
 
 ## Install (use it)
 
@@ -50,6 +51,33 @@ Then **Load unpacked** → `dist/` (see above).
 
 Works on normal websites. It **cannot** run on `chrome://` pages, the new-tab page, or the Chrome Web Store (Chrome blocks all extensions there) — you'll get a notification explaining why.
 
+## Optional: login & cloud history (Firebase)
+
+History lives in `chrome.storage.local` by default. To see the same history on all your devices, sign in from the side panel — entries merge (deduped, newest 100 win) and new results upload automatically.
+
+One-time setup:
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
+2. **Authentication → Sign-in method → Email/Password** → enable
+3. **Firestore Database → Create database** (production mode)
+4. Project settings → **Your apps → Web app** → copy the config into `src/shared/firebase-config.js`
+5. Firestore **Rules** — only the owner can read/write their history:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{doc=**} {
+      allow read, delete, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+6. `npm run build`, reload the extension
+
+> If your browser key has HTTP referrer restrictions, add `chrome-extension://<your-extension-id>` or use an unrestricted key for the Identity Toolkit API. Without config the extension works exactly as before — the sign-in card shows a hint instead.
+
 ## How it works
 
 ```
@@ -76,13 +104,13 @@ manifest.json            MV3 manifest (dist-relative paths)
 build.mjs                assembles dist/ (plain copy, no bundler needed)
 setup.mjs                bundles offline OCR assets into libs/
 src/
-  background/            service worker: capture, messaging, history, context menu
+  background/            service worker: capture, messaging, history, context menu, auth/sync
   content/               drag-select overlay, toasts, result card (+ CSS)
   offscreen/             hidden page: crop + Tesseract.js OCR
   ocr/                   text cleanup utilities
   popup/                 toolbar popup: select, file/paste OCR, settings
-  sidepanel/             history panel: search, filter, copy, delete
-  shared/                TypeScript types
+  sidepanel/             history panel: search, filter, copy, delete, sign in/out
+  shared/                TypeScript types + Firebase config
 icons/                   extension icons
 ```
 
@@ -98,7 +126,7 @@ icons/                   extension icons
 | `notifications` | Tell you when a page blocks extensions |
 | `<all_urls>` (host) | Run on any site; fetch right-clicked images for OCR |
 
-No analytics, no network calls in the OCR path (after the one-time language download).
+No analytics. The OCR path makes no network calls (after the one-time language download); the only other traffic is Firebase auth/history sync, and only when you sign in.
 
 ## Troubleshooting
 

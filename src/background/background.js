@@ -1,4 +1,15 @@
 import { cleanText } from '../ocr/text-detector.js';
+import {
+  getAuthState,
+  signIn,
+  signUp,
+  signOut,
+  pushEntry,
+  removeEntryFromCloud,
+  clearCloudHistory,
+  syncHistory,
+} from './firebase.js';
+import { isFirebaseConfigured } from '../shared/firebase-config.js';
 
 const DEFAULT_SETTINGS = { language: 'eng', removeLineBreaks: true, mergeSpaces: true };
 
@@ -100,7 +111,11 @@ async function processResult(raw, settings, extra = {}) {
     language: settings.language,
     ...extra,
   };
-  if (text) await saveHistoryEntry(entry);
+  if (text) {
+    await saveHistoryEntry(entry);
+    // mirror to the signed-in account (no-op when signed out)
+    await pushEntry(entry).catch((err) => console.warn('[ocr] cloud push failed:', err?.message || err));
+  }
   return entry;
 }
 
@@ -249,14 +264,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       case 'CLEAR_HISTORY':
         await chrome.storage.local.set({ history: [] });
+        clearCloudHistory().catch((err) => console.warn('[ocr] cloud clear failed:', err?.message || err));
         sendResponse({ ok: true });
         break;
       case 'DELETE_ENTRY': {
         const { history = [] } = await chrome.storage.local.get({ history: [] });
         await chrome.storage.local.set({ history: history.filter((e) => e.id !== message.id) });
+        removeEntryFromCloud(message.id).catch((err) => console.warn('[ocr] cloud delete failed:', err?.message || err));
         sendResponse({ ok: true });
         break;
       }
+      case 'AUTH_STATE':
+        sendResponse({ ok: true, configured: isFirebaseConfigured(), user: await getAuthState() });
+        break;
+      case 'AUTH_SIGN_IN':
+        sendResponse({ ok: true, user: await signIn(message.email, message.password) });
+        break;
+      case 'AUTH_SIGN_UP':
+        sendResponse({ ok: true, user: await signUp(message.email, message.password) });
+        break;
+      case 'AUTH_SIGN_OUT':
+        await signOut();
+        sendResponse({ ok: true });
+        break;
+      case 'SYNC_HISTORY':
+        sendResponse({ ok: true, stats: await syncHistory() });
+        break;
       default:
         sendResponse({ ok: false, error: 'unknown message' });
     }
