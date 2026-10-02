@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, rmSync, existsSync } from 'fs';
+import { cpSync, mkdirSync, rmSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,11 +11,23 @@ mkdirSync(dist, { recursive: true });
 // manifest (already uses dist-relative paths)
 cpSync(join(root, 'manifest.json'), join(dist, 'manifest.json'));
 
-// folders preserved 1:1 (manifest references these dist-relative paths)
-for (const dir of ['background', 'content', 'ocr', 'offscreen', 'popup', 'sidepanel', 'shared']) {
-  const actualSrc = join(root, 'src', dir);
-  if (existsSync(actualSrc)) cpSync(actualSrc, join(dist, dir), { recursive: true });
+// Copy page assets (html/css) from src — TypeScript sources are compiled
+// into dist/ by `tsc` right after this script (see package.json "build").
+function copyAssets(from, to) {
+  if (!existsSync(from)) return;
+  mkdirSync(to, { recursive: true });
+  for (const entry of readdirSync(from, { withFileTypes: true })) {
+    const src = join(from, entry.name);
+    const dst = join(to, entry.name);
+    if (entry.isDirectory()) copyAssets(src, dst);
+    else if (/\.(html|css)$/.test(entry.name)) cpSync(src, dst);
+  }
 }
+
+for (const dir of ['background', 'content', 'ocr', 'offscreen', 'popup', 'sidepanel', 'shared']) {
+  copyAssets(join(root, 'src', dir), join(dist, dir));
+}
+
 for (const dir of ['libs', 'icons']) {
   const actualSrc = join(root, dir);
   if (existsSync(actualSrc)) cpSync(actualSrc, join(dist, dir), { recursive: true });
@@ -26,5 +38,4 @@ for (const file of ['source-icon.png', 'generate.js']) {
   rmSync(join(dist, 'icons', file), { force: true });
 }
 
-console.log('Build complete -> dist/');
-console.log('Load unpacked: chrome://extensions -> Developer mode -> Load unpacked -> dist/');
+console.log('Assets copied -> dist/');

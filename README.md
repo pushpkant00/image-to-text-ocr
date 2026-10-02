@@ -32,7 +32,7 @@ git clone https://github.com/pushpkant00/image-to-text-ocr.git
 cd image-to-text-ocr
 npm install     # dependencies
 npm run setup   # bundles the offline OCR engine + English model (~15 MB into libs/)
-npm run build   # assembles the extension into dist/
+npm run build   # compiles TypeScript (tsc) + assembles the extension into dist/
 ```
 
 Then **Load unpacked** → `dist/` (see above).
@@ -60,7 +60,7 @@ One-time setup:
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
 2. **Authentication → Sign-in method → Email/Password** → enable
 3. **Firestore Database → Create database** (production mode)
-4. Project settings → **Your apps → Web app** → copy the config into `src/shared/firebase-config.js`
+4. Project settings → **Your apps → Web app** → copy the config into `src/shared/firebase-config.ts`
 5. Firestore **Rules** — only the owner can read/write their history:
 
 ```
@@ -101,7 +101,7 @@ side panel (searchable history) + result card + clipboard
 
 ```
 manifest.json            MV3 manifest (dist-relative paths)
-build.mjs                assembles dist/ (plain copy, no bundler needed)
+build.mjs                assembles dist/ (page assets + runs tsc, no bundler needed)
 setup.mjs                bundles offline OCR assets into libs/
 src/
   background/            service worker: capture, messaging, history, context menu, auth/sync
@@ -110,7 +110,7 @@ src/
   ocr/                   text cleanup utilities
   popup/                 toolbar popup: select, file/paste OCR, settings
   sidepanel/             history panel: search, filter, copy, delete, sign in/out
-  shared/                TypeScript types + Firebase config
+  shared/                ambient type definitions (types.d.ts) + Firebase config
 icons/                   extension icons
 ```
 
@@ -140,7 +140,8 @@ No analytics. The OCR path makes no network calls (after the one-time language d
 
 ## Tech
 
-- Chrome Manifest V3, vanilla JS/HTML/CSS (no framework, no bundler)
+- Chrome Manifest V3, **TypeScript** (strict mode, compiled with `tsc`) + vanilla HTML/CSS — no framework, no bundler
+- `npm run lint` type-checks without emitting (`tsc --noEmit`)
 - [Tesseract.js v5](https://github.com/naptha/tesseract.js) (LSTM OCR, WebAssembly) — fully local
 
 ## License

@@ -1,54 +1,76 @@
+interface RuntimeResponse {
+  ok?: boolean;
+  error?: string;
+  user?: AuthUser | null;
+  configured?: boolean;
+  stats?: SyncStats;
+  history?: OCRHistoryEntry[];
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  const $ = (id) => document.getElementById(id);
-  const historyList = $('history-list');
-  const searchInput = $('search-input');
-  const filterLanguage = $('filter-language');
-  const clearHistoryBtn = $('clear-history-btn');
-  const detailPanel = $('detail-panel');
-  const detailText = $('detail-text');
-  const copyDetailBtn = $('copy-detail-btn');
-  const backBtn = $('back-btn');
-  const headerTitle = document.querySelector('.header h2');
+  const q = <T extends HTMLElement>(id: string): T => {
+    const el = document.getElementById(id);
+    if (!el) throw new Error(`#${id} not found`);
+    return el as T;
+  };
+
+  const qs = <T extends HTMLElement>(selector: string): T => {
+    const el = document.querySelector(selector);
+    if (!el) throw new Error(`${selector} not found`);
+    return el as T;
+  };
+
+  const historyList = q<HTMLDivElement>('history-list');
+  const searchInput = q<HTMLInputElement>('search-input');
+  const filterLanguage = q<HTMLSelectElement>('filter-language');
+  const clearHistoryBtn = q<HTMLButtonElement>('clear-history-btn');
+  const detailPanel = q<HTMLDivElement>('detail-panel');
+  const detailText = q<HTMLDivElement>('detail-text');
+  const copyDetailBtn = q<HTMLButtonElement>('copy-detail-btn');
+  const backBtn = q<HTMLButtonElement>('back-btn');
+  const headerTitle = qs<HTMLHeadingElement>('.header h2');
+  const filters = qs<HTMLElement>('.filters');
 
   // account / cloud sync
-  const accountCard = document.getElementById('account-card');
-  const signedOutView = document.getElementById('signed-out-view');
-  const signedInView = document.getElementById('signed-in-view');
-  const authEmail = document.getElementById('auth-email');
-  const authPassword = document.getElementById('auth-password');
-  const authStatus = document.getElementById('auth-status');
-  const signInBtn = document.getElementById('sign-in-btn');
-  const signUpBtn = document.getElementById('sign-up-btn');
-  const configHint = document.getElementById('config-hint');
-  const accountAvatar = document.getElementById('account-avatar');
-  const accountEmail = document.getElementById('account-email');
-  const syncStatus = document.getElementById('sync-status');
-  const syncBtn = document.getElementById('sync-btn');
-  const signOutBtn = document.getElementById('sign-out-btn');
+  const accountCard = q<HTMLDivElement>('account-card');
+  const signedOutView = q<HTMLDivElement>('signed-out-view');
+  const signedInView = q<HTMLDivElement>('signed-in-view');
+  const authEmail = q<HTMLInputElement>('auth-email');
+  const authPassword = q<HTMLInputElement>('auth-password');
+  const authStatus = q<HTMLDivElement>('auth-status');
+  const signInBtn = q<HTMLButtonElement>('sign-in-btn');
+  const signUpBtn = q<HTMLButtonElement>('sign-up-btn');
+  const configHint = q<HTMLDivElement>('config-hint');
+  const accountAvatar = q<HTMLSpanElement>('account-avatar');
+  const accountEmail = q<HTMLSpanElement>('account-email');
+  const syncStatus = q<HTMLDivElement>('sync-status');
+  const syncBtn = q<HTMLButtonElement>('sync-btn');
+  const signOutBtn = q<HTMLButtonElement>('sign-out-btn');
 
-  let history = [];
-  let currentDetail = null;
+  let history: OCRHistoryEntry[] = [];
+  let currentDetail: OCRHistoryEntry | null = null;
   let busy = false;
 
-  function setStatus(el, message, kind = '') {
+  function setStatus(el: HTMLElement, message: string, kind = ''): void {
     el.textContent = message;
     el.classList.remove('hidden', 'error', 'success');
     if (message) el.classList.add(kind);
     else el.classList.add('hidden');
   }
 
-  function setBusy(value) {
+  function setBusy(value: boolean): void {
     busy = value;
     [signInBtn, signUpBtn, syncBtn, signOutBtn].forEach((b) => (b.disabled = value));
   }
 
-  async function sendMessage(message) {
-    return (await chrome.runtime.sendMessage(message)) || { ok: false, error: 'No response from background' };
+  async function sendMessage(message: BackgroundRequest): Promise<RuntimeResponse> {
+    const res = (await chrome.runtime.sendMessage(message)) as RuntimeResponse | undefined;
+    return res || { ok: false, error: 'No response from background' };
   }
 
-  async function refreshAccount() {
+  async function refreshAccount(): Promise<AuthUser | null> {
     const res = await sendMessage({ type: 'AUTH_STATE' });
-    const user = res?.ok ? res.user : null;
+    const user = res?.ok ? res.user ?? null : null;
     signedOutView.classList.toggle('hidden', Boolean(user));
     signedInView.classList.toggle('hidden', !user);
     configHint.classList.toggle('hidden', !(res?.ok && !res.configured));
@@ -59,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return user;
   }
 
-  async function syncNow(showStatus = true) {
+  async function syncNow(showStatus = true): Promise<boolean> {
     const res = await sendMessage({ type: 'SYNC_HISTORY' });
     if (res?.ok && showStatus) {
       const { total = 0, uploaded = 0 } = res.stats || {};
@@ -68,10 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus(syncStatus, res?.error || 'Sync failed', 'error');
     }
     if (res?.ok) await loadHistory();
-    return res?.ok;
+    return Boolean(res?.ok);
   }
 
-  async function handleAuth(kind) {
+  async function handleAuth(kind: 'AUTH_SIGN_IN' | 'AUTH_SIGN_UP'): Promise<void> {
     if (busy) return;
     const email = authEmail.value.trim();
     const password = authPassword.value;
@@ -128,21 +150,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  async function loadHistory() {
+  async function loadHistory(): Promise<void> {
     const res = await chrome.runtime.sendMessage({ type: 'GET_HISTORY' });
-    history = res?.ok ? res.history : [];
+    history = res?.ok ? (res.history as OCRHistoryEntry[]) : [];
     renderHistory();
   }
 
   // Live-update when background saves new entries
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.history) {
-      history = changes.history.newValue || [];
+      const value = changes.history.newValue;
+      history = Array.isArray(value) ? (value as OCRHistoryEntry[]) : [];
       if (detailPanel.classList.contains('hidden')) renderHistory();
     }
   });
 
-  function emptyState(msg) {
+  function emptyState(msg: string): void {
     historyList.innerHTML = '';
     const d = document.createElement('div');
     d.className = 'empty-state';
@@ -150,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     historyList.appendChild(d);
   }
 
-  function renderHistory() {
+  function renderHistory(): void {
     const query = searchInput.value.trim().toLowerCase();
     const filterLang = filterLanguage.value;
     const filtered = history.filter(
@@ -197,20 +220,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function openDetail(entry) {
+  function openDetail(entry: OCRHistoryEntry): void {
     currentDetail = entry;
     detailText.textContent = entry.text || '';
     detailPanel.classList.remove('hidden');
     historyList.style.display = 'none';
-    document.querySelector('.filters').style.display = 'none';
+    filters.style.display = 'none';
     accountCard.style.display = 'none';
     headerTitle.textContent = `Result · ${entry.confidence || 0}% · ${entry.language || ''}`;
   }
 
-  function closeDetail() {
+  function closeDetail(): void {
     detailPanel.classList.add('hidden');
     historyList.style.display = 'block';
-    document.querySelector('.filters').style.display = 'flex';
+    filters.style.display = 'flex';
     accountCard.style.display = '';
     headerTitle.textContent = 'OCR History';
     currentDetail = null;

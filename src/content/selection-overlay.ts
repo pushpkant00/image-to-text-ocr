@@ -1,18 +1,27 @@
 // Content script: drag-to-select overlay + toasts.
 // Only uses content-script-safe APIs (runtime messaging, storage, clipboard).
 // Screen capture + OCR happen in background/offscreen; results come back as OCR_DONE.
+// NOTE: no `import` here — content scripts are loaded as classic scripts, so this
+// file must stay a script (shared types come from src/shared/types.d.ts globals).
+
+interface Window {
+  __ocrOverlayInjected?: boolean;
+}
+
 (() => {
+  const q = <T extends Element>(root: ParentNode, selector: string): T => root.querySelector(selector) as T;
+
   if (window.__ocrOverlayInjected) return;
   window.__ocrOverlayInjected = true;
 
   const OVERLAY_ID = 'ocr-selection-overlay';
-  let overlay = null;
-  let rect = null;
+  let overlay: HTMLDivElement | null = null;
+  let rect: HTMLDivElement | null = null;
   let selecting = false;
   let startX = 0;
   let startY = 0;
 
-  function toast(msg, ok = true) {
+  function toast(msg: string, ok = true): void {
     document.querySelector('.ocr-toast')?.remove();
     const t = document.createElement('div');
     t.className = 'ocr-toast';
@@ -22,7 +31,7 @@
     setTimeout(() => t.remove(), ok ? 2500 : 4500);
   }
 
-  function progressToast(msg) {
+  function progressToast(msg: string): HTMLDivElement {
     document.querySelector('.ocr-toast')?.remove();
     const t = document.createElement('div');
     t.className = 'ocr-toast';
@@ -32,7 +41,7 @@
     return t;
   }
 
-  async function copyText(text) {
+  async function copyText(text: string): Promise<boolean> {
     try {
       await navigator.clipboard.writeText(text);
       return true;
@@ -52,34 +61,34 @@
     }
   }
 
-  function removeOverlay() {
+  function removeOverlay(): void {
     overlay?.remove();
     overlay = null;
     rect = null;
     selecting = false;
   }
 
-  function startSelection() {
+  function startSelection(): void {
     if (overlay || !document.body) return;
     overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
     overlay.innerHTML = `
       <div class="ocr-sel-toolbar"><span>Drag to select text area &nbsp;•&nbsp; <b>Esc</b> cancels</span><button type="button" class="ocr-sel-cancel">Cancel</button></div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector('.ocr-sel-cancel').addEventListener('mousedown', (e) => {
+    q<HTMLButtonElement>(overlay, '.ocr-sel-cancel').addEventListener('mousedown', (e) => {
       e.stopPropagation();
       removeOverlay();
     });
 
     overlay.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.ocr-sel-toolbar')) return;
+      if ((e.target as Element).closest('.ocr-sel-toolbar')) return;
       e.preventDefault();
       selecting = true;
       startX = e.clientX;
       startY = e.clientY;
       rect = document.createElement('div');
       rect.className = 'ocr-sel-rect';
-      overlay.appendChild(rect);
+      overlay?.appendChild(rect);
     });
 
     overlay.addEventListener('mousemove', (e) => {
@@ -105,10 +114,10 @@
     });
   }
 
-  async function runCapture(area) {
+  async function runCapture(area: SelectionArea): Promise<void> {
     const indicator = progressToast('Reading text…');
     try {
-      const settings = await chrome.storage.sync.get({ language: 'eng' });
+      const settings = await chrome.storage.sync.get<SyncStorage>({ language: 'eng' });
       const res = await chrome.runtime.sendMessage({
         type: 'OCR_CAPTURE',
         area,
@@ -117,7 +126,7 @@
       });
       indicator.remove();
       if (!res?.ok) throw new Error(res?.error || 'OCR failed');
-      const text = res.entry?.text || '';
+      const text: string = res.entry?.text || '';
       if (!text) {
         toast('No text found in that area', false);
         return;
@@ -126,11 +135,11 @@
       showResultCard(res.entry);
     } catch (err) {
       indicator.remove();
-      toast('OCR failed: ' + String(err?.message || err), false);
+      toast('OCR failed: ' + (err instanceof Error ? err.message : String(err)), false);
     }
   }
 
-  function showResultCard(entry) {
+  function showResultCard(entry: OCRHistoryEntry): void {
     document.querySelector('.ocr-result-card')?.remove();
     const text = entry?.text || '';
     const card = document.createElement('div');
@@ -140,11 +149,11 @@
       <div class="ocr-result-meta"></div>
       <div class="ocr-result-text" tabindex="0"></div>
       <div class="ocr-result-footer"><button type="button" class="ocr-result-copy">Copy</button></div>`;
-    card.querySelector('.ocr-result-text').textContent = text;
-    card.querySelector('.ocr-result-meta').textContent =
+    q<HTMLElement>(card, '.ocr-result-text').textContent = text;
+    q<HTMLElement>(card, '.ocr-result-meta').textContent =
       `${text.length} chars · ${entry.confidence || 0}% confidence · ${entry.language || ''}`;
-    card.querySelector('.ocr-result-close').addEventListener('click', () => card.remove());
-    const copyBtn = card.querySelector('.ocr-result-copy');
+    q<HTMLButtonElement>(card, '.ocr-result-close').addEventListener('click', () => card.remove());
+    const copyBtn = q<HTMLButtonElement>(card, '.ocr-result-copy');
     copyBtn.addEventListener('click', async () => {
       const ok = await copyText(text);
       copyBtn.textContent = ok ? 'Copied ✓' : 'Failed';
@@ -155,14 +164,16 @@
 
   // Background notifies us when OCR finishes (right-click flow copies here too)
   chrome.runtime.onMessage.addListener((message) => {
-    if (message?.type === 'START_SELECTION') startSelection();
-    if (message?.type === 'OCR_DONE' && message.entry?.text) {
-      copyText(message.entry.text).then((ok) => {
-        if (ok) showResultCard(message.entry);
+    const msg = message as ContentRequest | undefined;
+    if (msg?.type === 'START_SELECTION') startSelection();
+    if (msg?.type === 'OCR_DONE' && msg.entry?.text) {
+      const entry = msg.entry;
+      copyText(entry.text).then((ok) => {
+        if (ok) showResultCard(entry);
         else toast('Text extracted (copy manually from side panel)', false);
       });
     }
-    if (message?.type === 'OCR_FAILED') toast('OCR failed: ' + (message.error || ''), false);
+    if (msg?.type === 'OCR_FAILED') toast('OCR failed: ' + (msg.error || ''), false);
   });
 
   document.addEventListener('keydown', (e) => {

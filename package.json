@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "setup": "node setup.mjs",
-    "build": "node build.mjs",
+    "build": "node build.mjs && tsc && node -e \"console.log('Build complete -> dist/  ·  Load unpacked: chrome://extensions -> dist/')\"",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "tesseract.js": "^5.1.1"
   },
   "devDependencies": {
+    "@types/chrome": "^0.3.4",
     "typescript": "^5.7.2"
   }
 }
