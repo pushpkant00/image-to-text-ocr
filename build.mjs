@@ -21,5 +21,10 @@ for (const dir of ['libs', 'icons']) {
   if (existsSync(actualSrc)) cpSync(actualSrc, join(dist, dir), { recursive: true });
 }
 
+// ship only the generated icons, not the source art / generator script
+for (const file of ['source-icon.png', 'generate.js']) {
+  rmSync(join(dist, 'icons', file), { force: true });
+}
+
 console.log('Build complete -> dist/');
 console.log('Load unpacked: chrome://extensions -> Developer mode -> Load unpacked -> dist/');
