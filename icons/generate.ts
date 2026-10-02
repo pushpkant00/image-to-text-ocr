@@ -1,12 +1,12 @@
 import { createCanvas, loadImage } from 'canvas';
-import fs from 'fs';
-import path from 'path';
+import { writeFileSync } from 'fs';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const iconsDir = path.dirname(fileURLToPath(import.meta.url));
-const source = path.join(iconsDir, 'source-icon.png');
+const iconsDir = dirname(fileURLToPath(import.meta.url));
+const source = join(iconsDir, 'source-icon.png');
 
-async function generateIcon(size) {
+async function generateIcon(size: number): Promise<void> {
   const image = await loadImage(source);
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');
@@ -15,7 +15,6 @@ async function generateIcon(size) {
   const scale = size / side;
 
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(
     image,
     (size - image.width * scale) / 2,
@@ -24,7 +23,7 @@ async function generateIcon(size) {
     image.height * scale
   );
 
-  fs.writeFileSync(path.join(iconsDir, `icon${size}.png`), canvas.toBuffer('image/png'));
+  writeFileSync(join(iconsDir, `icon${size}.png`), canvas.toBuffer('image/png'));
 }
 
 const sizes = [16, 48, 128];

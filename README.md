@@ -25,7 +25,7 @@ No build needed if you grab a built copy — otherwise build from source below, 
 
 ## Build from source
 
-Requirements: [Node.js](https://nodejs.org/) 18+.
+Requirements: [Node.js](https://nodejs.org/) 23.6+ (build scripts are TypeScript and run directly through Node's native type stripping).
 
 ```bash
 git clone https://github.com/pushpkant00/image-to-text-ocr.git
@@ -101,8 +101,8 @@ side panel (searchable history) + result card + clipboard
 
 ```
 manifest.json            MV3 manifest (dist-relative paths)
-build.mjs                assembles dist/ (page assets + runs tsc, no bundler needed)
-setup.mjs                bundles offline OCR assets into libs/
+build.ts                 assembles dist/ (page assets + runs tsc, no bundler needed)
+setup.ts                 bundles offline OCR assets into libs/
 src/
   background/            service worker: capture, messaging, history, context menu, auth/sync
   content/               drag-select overlay, toasts, result card (+ CSS)

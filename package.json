@@ -3,16 +3,21 @@
   "version": "1.0.0",
   "description": "Chrome extension to copy text from images using local OCR",
   "type": "module",
+  "engines": {
+    "node": ">=23.6"
+  },
   "scripts": {
-    "setup": "node setup.mjs",
-    "build": "node build.mjs && tsc && node -e \"console.log('Build complete -> dist/  ·  Load unpacked: chrome://extensions -> dist/')\"",
-    "lint": "tsc --noEmit"
+    "setup": "node setup.ts",
+    "build": "node build.ts && tsc && node -e \"console.log('Build complete -> dist/  ·  Load unpacked: chrome://extensions -> dist/')\"",
+    "icons": "node icons/generate.ts",
+    "lint": "tsc --noEmit && tsc -p tsconfig.tools.json"
   },
   "dependencies": {
     "tesseract.js": "^5.1.1"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.4",
+    "@types/node": "^26.6.4",
     "typescript": "^5.7.2"
   }
 }

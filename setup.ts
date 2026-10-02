@@ -9,17 +9,17 @@
 //  3. Downloads the English traineddata (~3 MB) for fully offline OCR
 // Then build with: npm run build
 
-import { cpSync, mkdirSync, existsSync } from 'fs';
+import { cpSync, mkdirSync, existsSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const root = join(dirname(fileURLToPath(import.meta.url)));
+const root = dirname(fileURLToPath(import.meta.url));
 const libs = join(root, 'libs', 'tesseract');
 const langDir = join(libs, 'lang-data');
 
 const ENG_URL = 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz';
 
-function need(dir, hint) {
+function need(dir: string, hint?: string): void {
   if (!existsSync(dir)) {
     console.error(`Missing ${dir}\nRun \`npm install\` first. ${hint || ''}`);
     process.exit(1);
@@ -58,7 +58,6 @@ if (existsSync(dest)) {
   const res = await fetch(ENG_URL);
   if (!res.ok) throw new Error(`download failed: HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
-  const { writeFileSync } = await import('fs');
   writeFileSync(dest, buf);
   console.log(`saved eng.traineddata.gz (${(buf.length / 1024 / 1024).toFixed(1)} MB)`);
 }
