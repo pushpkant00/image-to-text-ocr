@@ -1,6 +1,6 @@
 # Image to Text OCR — Chrome Extension
 
-Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, right-click an image, or paste a screenshot — the text is recognized **on your device** and copied to your clipboard. OCR itself is fully offline; an optional account lets you sync history across devices.
+Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, right-click an image, or paste a screenshot — the text is recognized **on your device** and shown in a result card — nothing touches your clipboard until you click **Copy**. OCR itself is fully offline; an optional account lets you sync history across devices.
 
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue) ![Offline OCR](https://img.shields.io/badge/OCR-on--device-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
@@ -9,7 +9,7 @@ Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, 
 - **Drag-to-select OCR** — press `Ctrl+Shift+X` (or `⌘+Shift+X` on Mac), draw a box over anything: images, video frames, PDFs in the browser, charts, memes
 - **Right-click any image** → *Extract text from this image*
 - **Popup tools** — OCR an image file or paste a screenshot straight from the clipboard (`Ctrl+V`)
-- **Result card** — minimal top-right popup shows what was copied, with a Copy button
+- **Result card** — compact top-right card with **Preview** and **Copy** buttons (text is copied only when you click Copy)
 - **Side-panel history** — searchable, per-language filter, confidence scores, delete/clear
 - **100% offline English OCR** — Tesseract.js + language data bundled, nothing ever leaves your machine
 - **Multi-language** — English works offline; other languages download their model once on first use
@@ -84,13 +84,13 @@ service cloud.firestore {
 selection overlay (content script: drag box, toasts, result card)
         │  area + devicePixelRatio
         ▼
-service worker (coordinator: captureVisibleTab, history, clipboard relay)
+service worker (coordinator: captureVisibleTab, history, cloud sync)
         │  full-tab screenshot + crop rect
         ▼
 offscreen document (DOM + canvas: crops, grayscales, runs Tesseract.js)
         │  extracted text
         ▼
-side panel (searchable history) + result card + clipboard
+side panel (searchable history) + result card
 ```
 
 - **Why an offscreen document?** Manifest V3 service workers have no DOM/canvas and can't host Tesseract's worker — Chrome's `chrome.offscreen` API is the sanctioned home for it.

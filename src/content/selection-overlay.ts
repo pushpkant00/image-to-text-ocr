@@ -131,7 +131,6 @@ interface Window {
         toast('No text found in that area', false);
         return;
       }
-      await copyText(text);
       showResultCard(res.entry);
     } catch (err) {
       indicator.remove();
@@ -153,7 +152,7 @@ interface Window {
     card.className = 'ocr-result-card';
     card.innerHTML = `
       <div class="ocr-result-header">
-        <span class="ocr-result-title">${SPARKLE_SVG}<span>✓ Copied</span></span>
+        <span class="ocr-result-title">${SPARKLE_SVG}<span class="ocr-result-heading">Text extracted</span></span>
         <button type="button" class="ocr-result-close" title="Close">×</button>
       </div>
       <div class="ocr-result-meta"></div>
@@ -161,40 +160,64 @@ interface Window {
       <div class="ocr-result-footer">
         <button type="button" class="ocr-result-preview">${EYE_SVG}<span>Preview</span></button>
         <button type="button" class="ocr-result-copy">${COPY_SVG}<span>Copy</span></button>
-      </div>`;
-    q<HTMLElement>(card, '.ocr-result-text').textContent = text;
+      </div>
+      <div class="ocr-resize-handle" title="Drag to resize"></div>`;
+    const textEl = q<HTMLElement>(card, '.ocr-result-text');
+    textEl.textContent = text;
     q<HTMLElement>(card, '.ocr-result-meta').textContent =
       `${text.length} chars · ${entry.confidence || 0}% confidence · ${entry.language || ''}`;
     q<HTMLButtonElement>(card, '.ocr-result-close').addEventListener('click', () => card.remove());
 
+    const heading = q<HTMLElement>(card, '.ocr-result-heading');
     const previewBtn = q<HTMLButtonElement>(card, '.ocr-result-preview');
     const previewLabel = q<HTMLElement>(previewBtn, 'span');
     previewBtn.addEventListener('click', () => {
-      const expanded = card.classList.toggle('ocr-preview-mode');
-      previewLabel.textContent = expanded ? 'Collapse' : 'Preview';
+      const open = card.classList.toggle('ocr-preview-open');
+      previewLabel.textContent = open ? 'Hide' : 'Preview';
+      if (open) {
+        // cap the default size at ~40vh; the card is resizable from there
+        const cap = Math.round(window.innerHeight * 0.4);
+        card.style.height = Math.min(card.offsetHeight, cap) + 'px';
+      } else {
+        card.style.height = '';
+      }
     });
+
+    // custom resize grip, bottom-left corner (drags the card wider leftward + taller)
+    const handle = q<HTMLElement>(card, '.ocr-resize-handle');
+    let drag: { x: number; y: number; w: number; h: number } | null = null;
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      drag = { x: e.clientX, y: e.clientY, w: card.offsetWidth, h: card.offsetHeight };
+      handle.setPointerCapture(e.pointerId);
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      card.style.width = Math.max(200, drag.w + (drag.x - e.clientX)) + 'px';
+      card.style.height = Math.max(60, drag.h + (e.clientY - drag.y)) + 'px';
+    });
+    const endDrag = (): void => {
+      drag = null;
+    };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
 
     const copyBtn = q<HTMLButtonElement>(card, '.ocr-result-copy');
     const copyLabel = q<HTMLElement>(copyBtn, 'span');
     copyBtn.addEventListener('click', async () => {
       const ok = await copyText(text);
       copyLabel.textContent = ok ? 'Copied ✓' : 'Failed';
+      if (ok) heading.textContent = '✓ Copied';
       setTimeout(() => (copyLabel.textContent = 'Copy'), 1200);
     });
     document.body.appendChild(card);
   }
 
-  // Background notifies us when OCR finishes (right-click flow copies here too)
+  // Background notifies us when OCR finishes (right-click flow shows the card too)
   chrome.runtime.onMessage.addListener((message) => {
     const msg = message as ContentRequest | undefined;
     if (msg?.type === 'START_SELECTION') startSelection();
-    if (msg?.type === 'OCR_DONE' && msg.entry?.text) {
-      const entry = msg.entry;
-      copyText(entry.text).then((ok) => {
-        if (ok) showResultCard(entry);
-        else toast('Text extracted (copy manually from side panel)', false);
-      });
-    }
+    if (msg?.type === 'OCR_DONE' && msg.entry?.text) showResultCard(msg.entry);
     if (msg?.type === 'OCR_FAILED') toast('OCR failed: ' + (msg.error || ''), false);
   });
 

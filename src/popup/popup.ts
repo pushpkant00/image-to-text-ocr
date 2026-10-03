@@ -73,9 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setStatus('No text found in that image.', false);
         return;
       }
-      await navigator.clipboard.writeText(text);
       showLast(text);
-      setStatus(`Copied ${text.length} chars to clipboard.`, false);
+      setStatus(`Extracted ${text.length} chars — preview or copy below.`, false);
     } catch (err) {
       setStatus('Failed: ' + (err instanceof Error ? err.message : String(err)), false);
     }

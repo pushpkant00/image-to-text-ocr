@@ -46,8 +46,10 @@
   top: 12px;
   right: 12px;
   width: 280px;
+  min-width: 200px;
+  min-height: 60px;
   max-width: calc(100vw - 24px);
-  max-height: 40vh;
+  max-height: calc(100vh - 24px);
   display: flex;
   flex-direction: column;
   z-index: 2147483647;
@@ -89,14 +91,40 @@
 .ocr-result-close:hover { color: #333; }
 .ocr-result-meta { display: none; }
 .ocr-result-text {
+  display: none;
   margin: 2px 9px 4px;
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-y: auto;
-  max-height: 22vh;
   user-select: text;
   cursor: text;
   line-height: 1.45;
+}
+/* Preview shows the text in the card; drag the bottom-left corner to resize */
+.ocr-result-card.ocr-preview-open .ocr-result-text {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.ocr-resize-handle {
+  display: none;
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: nesw-resize;
+  touch-action: none;
+}
+.ocr-result-card.ocr-preview-open .ocr-resize-handle { display: block; }
+.ocr-resize-handle::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 10px;
+  height: 10px;
+  background: repeating-linear-gradient(135deg, transparent 0 3px, #c5c5c5 3px 4px);
 }
 .ocr-result-footer {
   padding: 4px 9px 9px;
@@ -129,18 +157,3 @@
   color: #fff;
 }
 .ocr-result-footer .ocr-result-copy:hover { background: #106ebe; }
-
-/* Preview mode: centered, larger read view */
-.ocr-result-card.ocr-preview-mode {
-  top: 50%;
-  left: 50%;
-  right: auto;
-  transform: translate(-50%, -50%);
-  width: min(680px, calc(100vw - 32px));
-  max-height: 80vh;
-}
-.ocr-result-card.ocr-preview-mode .ocr-result-text {
-  max-height: calc(80vh - 90px);
-  font-size: 13.5px;
-  line-height: 1.55;
-}

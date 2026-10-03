@@ -95,14 +95,6 @@
         const worker = await getWorker(language);
         const { data } = await worker.recognize(cropped);
         const text = (data?.text || '').trim();
-        // Copy straight to clipboard here (offscreen has DOM + clipboard permission)
-        if (text) {
-          try {
-            await navigator.clipboard.writeText(text);
-          } catch {
-            /* background/content will copy as fallback */
-          }
-        }
         const response: OcrRunResponse = { text, confidence: data?.confidence || 0 };
         sendResponse(response);
       } catch (err) {

@@ -179,7 +179,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     const raw = await ocrViaOffscreen({ imageData, language: settings.language });
     if (raw?.error) throw new Error(raw.error);
     const entry = await processResult(raw, settings);
-    // send text back to the tab so the content script can copy + toast
+    // send text back to the tab so the content script can show the result card
     if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'OCR_DONE', entry }).catch(() => {});
     if (tab?.windowId) openSidePanel(tab.windowId);
   } catch (err) {
@@ -256,7 +256,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         sendResponse({ ok: true, entry });
         if (tab?.windowId) openSidePanel(tab.windowId);
-        // tell the originating tab so it can copy to clipboard + toast
+        // tell the originating tab so it can show the result card
         if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'OCR_DONE', entry }).catch(() => {});
         break;
       }
