@@ -75,10 +75,18 @@ select {
   overflow-y: auto;
 }
 .result-box.hidden { display: none; }
+.result-box.expanded { max-height: 340px; }
 .result-box h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   margin-bottom: 8px;
   color: #666;
+}
+.sparkle-icon {
+  width: 14px;
+  height: 14px;
 }
 .result-box pre {
   font-size: 12px;
@@ -86,6 +94,37 @@ select {
   word-wrap: break-word;
   max-height: 150px;
   overflow-y: auto;
+}
+.result-box.expanded pre { max-height: 250px; }
+.result-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.result-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+}
+.result-btn:hover { background: #ececec; }
+.result-btn.primary {
+  background: #0078d4;
+  border-color: #0078d4;
+  color: #fff;
+}
+.result-btn.primary:hover { background: #005a9e; }
+.result-btn svg {
+  width: 14px;
+  height: 14px;
 }
 .shortcut {
   text-align: center;
@@ -121,12 +160,4 @@ select {
 }
 .status.hidden { display: none; }
 .status.busy { background: #e3f2fd; color: #1565c0; }
-.link-btn {
-  background: none;
-  border: none;
-  color: #0078d4;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 0 0 0 8px;
-}
 .note { color: #999; font-size: 11px; }

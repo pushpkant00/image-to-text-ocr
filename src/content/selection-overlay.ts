@@ -139,25 +139,47 @@ interface Window {
     }
   }
 
+  const SPARKLE_SVG =
+    '<svg class="ocr-card-icon" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="ocrSparkleGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0078d4"/><stop offset="1" stop-color="#ffb900"/></linearGradient></defs><path fill="url(#ocrSparkleGrad)" d="M12 2 Q13.5 10.5 22 12 Q13.5 13.5 12 22 Q10.5 13.5 2 12 Q10.5 10.5 12 2 Z"/></svg>';
+  const EYE_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const COPY_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
   function showResultCard(entry: OCRHistoryEntry): void {
     document.querySelector('.ocr-result-card')?.remove();
     const text = entry?.text || '';
     const card = document.createElement('div');
     card.className = 'ocr-result-card';
     card.innerHTML = `
-      <div class="ocr-result-header"><span>✓ Copied</span><button type="button" class="ocr-result-close" title="Close">×</button></div>
+      <div class="ocr-result-header">
+        <span class="ocr-result-title">${SPARKLE_SVG}<span>✓ Copied</span></span>
+        <button type="button" class="ocr-result-close" title="Close">×</button>
+      </div>
       <div class="ocr-result-meta"></div>
       <div class="ocr-result-text" tabindex="0"></div>
-      <div class="ocr-result-footer"><button type="button" class="ocr-result-copy">Copy</button></div>`;
+      <div class="ocr-result-footer">
+        <button type="button" class="ocr-result-preview">${EYE_SVG}<span>Preview</span></button>
+        <button type="button" class="ocr-result-copy">${COPY_SVG}<span>Copy</span></button>
+      </div>`;
     q<HTMLElement>(card, '.ocr-result-text').textContent = text;
     q<HTMLElement>(card, '.ocr-result-meta').textContent =
       `${text.length} chars · ${entry.confidence || 0}% confidence · ${entry.language || ''}`;
     q<HTMLButtonElement>(card, '.ocr-result-close').addEventListener('click', () => card.remove());
+
+    const previewBtn = q<HTMLButtonElement>(card, '.ocr-result-preview');
+    const previewLabel = q<HTMLElement>(previewBtn, 'span');
+    previewBtn.addEventListener('click', () => {
+      const expanded = card.classList.toggle('ocr-preview-mode');
+      previewLabel.textContent = expanded ? 'Collapse' : 'Preview';
+    });
+
     const copyBtn = q<HTMLButtonElement>(card, '.ocr-result-copy');
+    const copyLabel = q<HTMLElement>(copyBtn, 'span');
     copyBtn.addEventListener('click', async () => {
       const ok = await copyText(text);
-      copyBtn.textContent = ok ? 'Copied ✓' : 'Failed';
-      setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
+      copyLabel.textContent = ok ? 'Copied ✓' : 'Failed';
+      setTimeout(() => (copyLabel.textContent = 'Copy'), 1200);
     });
     document.body.appendChild(card);
   }

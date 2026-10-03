@@ -67,6 +67,16 @@
   color: #999;
   font-size: 11px;
 }
+.ocr-result-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ocr-card-icon {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
 .ocr-result-close {
   background: none;
   border: none;
@@ -89,16 +99,48 @@
   line-height: 1.45;
 }
 .ocr-result-footer {
-  padding: 0 9px 8px;
+  padding: 4px 9px 9px;
   display: flex;
-  justify-content: flex-end;
+  gap: 6px;
 }
-.ocr-result-copy {
-  padding: 2px 10px;
-  border: none;
-  background: none;
-  color: #0078d4;
+.ocr-result-footer button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f5f5f5;
+  color: #333;
   font-size: 12px;
   cursor: pointer;
 }
-.ocr-result-copy:hover { text-decoration: underline; }
+.ocr-result-footer button:hover { background: #ececec; }
+.ocr-result-footer button svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+.ocr-result-footer .ocr-result-copy {
+  background: #0078d4;
+  border-color: #0078d4;
+  color: #fff;
+}
+.ocr-result-footer .ocr-result-copy:hover { background: #106ebe; }
+
+/* Preview mode: centered, larger read view */
+.ocr-result-card.ocr-preview-mode {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  width: min(680px, calc(100vw - 32px));
+  max-height: 80vh;
+}
+.ocr-result-card.ocr-preview-mode .ocr-result-text {
+  max-height: calc(80vh - 90px);
+  font-size: 13.5px;
+  line-height: 1.55;
+}

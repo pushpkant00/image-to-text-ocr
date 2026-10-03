@@ -32,8 +32,12 @@
       <label><input type="checkbox" id="merge-spaces" checked> Merge extra spaces</label>
     </div>
     <div id="last-result" class="result-box hidden">
-      <h3>Last Result <button id="copy-last-btn" class="link-btn">Copy</button></h3>
+      <h3><svg class="sparkle-icon" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="popupSparkleGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0078d4"/><stop offset="1" stop-color="#ffb900"/></linearGradient></defs><path fill="url(#popupSparkleGrad)" d="M12 2 Q13.5 10.5 22 12 Q13.5 13.5 12 22 Q10.5 13.5 2 12 Q10.5 10.5 12 2 Z"/></svg> Last Result</h3>
       <pre id="last-text"></pre>
+      <div class="result-actions">
+        <button id="preview-last-btn" class="result-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Preview</span></button>
+        <button id="copy-last-btn" class="result-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span></button>
+      </div>
     </div>
     <button id="view-history-btn" class="secondary">Open History Panel</button>
     <p class="shortcut">Right-click any image → “Extract text from this image”</p>

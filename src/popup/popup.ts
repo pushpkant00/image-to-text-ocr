@@ -97,14 +97,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // --- history ---
-  function showLast(text: string): void {
-    lastResult.classList.remove('hidden');
-    lastText.textContent = text.length > 500 ? text.slice(0, 500) + '…' : text;
+  const previewLastBtn = q<HTMLButtonElement>('preview-last-btn');
+  let lastFullText = '';
+  let lastExpanded = false;
+
+  function setLabel(btn: HTMLButtonElement, text: string): void {
+    const span = btn.querySelector('span');
+    if (span) span.textContent = text;
   }
+
+  function renderLast(): void {
+    lastResult.classList.toggle('expanded', lastExpanded);
+    lastText.textContent =
+      !lastExpanded && lastFullText.length > 500 ? lastFullText.slice(0, 500) + '…' : lastFullText;
+    setLabel(previewLastBtn, lastExpanded ? 'Collapse' : 'Preview');
+  }
+
+  function showLast(text: string): void {
+    lastFullText = text;
+    lastResult.classList.remove('hidden');
+    renderLast();
+  }
+
+  previewLastBtn.addEventListener('click', () => {
+    lastExpanded = !lastExpanded;
+    renderLast();
+  });
   copyLastBtn.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(lastText.textContent || '');
-    copyLastBtn.textContent = 'Copied!';
-    setTimeout(() => (copyLastBtn.textContent = 'Copy'), 1200);
+    await navigator.clipboard.writeText(lastFullText);
+    setLabel(copyLastBtn, 'Copied!');
+    setTimeout(() => setLabel(copyLastBtn, 'Copy'), 1200);
   });
   viewHistoryBtn.addEventListener('click', async () => {
     const win = await chrome.windows.getCurrent();
