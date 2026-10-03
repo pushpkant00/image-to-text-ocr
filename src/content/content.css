@@ -60,7 +60,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   font: 12px 'Segoe UI', sans-serif;
   overflow: hidden;
-  resize: none;
+  /* !important: kill native right-bottom grip even if a stale stylesheet re-enables resize */
+  resize: none !important;
 }
 .ocr-result-header {
   display: flex;
@@ -103,8 +104,8 @@
 }
 /* Preview shows the text in the card; drag the bottom-left corner to resize */
 .ocr-result-card.ocr-preview-open .ocr-result-text {
-  display: block;
-  flex: 1 1 auto;
+  display: block !important;
+  flex: 1 1 auto !important;
   min-height: 0;
 }
 .ocr-resize-handle {
@@ -131,6 +132,8 @@
   padding: 4px 9px 9px;
   display: flex;
   gap: 6px;
+  /* pins the buttons to the card bottom even if the text area fails to flex */
+  margin-top: auto;
 }
 .ocr-result-footer button {
   flex: 1;
