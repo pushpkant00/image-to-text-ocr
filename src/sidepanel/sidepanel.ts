@@ -46,21 +46,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncStatus = q<HTMLDivElement>('sync-status');
   const syncBtn = q<HTMLButtonElement>('sync-btn');
   const signOutBtn = q<HTMLButtonElement>('sign-out-btn');
+  const verifyBanner = q<HTMLDivElement>('verify-banner');
+  const resendBtn = q<HTMLButtonElement>('resend-btn');
+  const verifiedBtn = q<HTMLButtonElement>('verified-btn');
+  const deleteAccountBtn = q<HTMLButtonElement>('delete-account-btn');
+  const deleteConfirm = q<HTMLDivElement>('delete-confirm');
+  const deletePassword = q<HTMLInputElement>('delete-password');
+  const deleteStatus = q<HTMLDivElement>('delete-status');
+  const deleteConfirmBtn = q<HTMLButtonElement>('delete-confirm-btn');
+  const deleteCancelBtn = q<HTMLButtonElement>('delete-cancel-btn');
 
   let history: OCRHistoryEntry[] = [];
   let currentDetail: OCRHistoryEntry | null = null;
+  let currentUser: AuthUser | null = null;
   let busy = false;
 
   function setStatus(el: HTMLElement, message: string, kind = ''): void {
     el.textContent = message;
-    el.classList.remove('hidden', 'error', 'success');
+    el.classList.remove('hidden', 'error', 'success', 'warn');
     if (message) el.classList.add(kind);
     else el.classList.add('hidden');
   }
 
   function setBusy(value: boolean): void {
     busy = value;
-    [signInBtn, signUpBtn, syncBtn, signOutBtn].forEach((b) => (b.disabled = value));
+    [signInBtn, signUpBtn, signOutBtn, resendBtn, verifiedBtn, deleteAccountBtn, deleteConfirmBtn, deleteCancelBtn].forEach(
+      (b) => {
+        b.disabled = value;
+      },
+    );
+    syncBtn.disabled = value || currentUser?.emailVerified !== true;
   }
 
   async function sendMessage(message: BackgroundRequest): Promise<RuntimeResponse> {
@@ -71,9 +86,12 @@ document.addEventListener('DOMContentLoaded', () => {
   async function refreshAccount(): Promise<AuthUser | null> {
     const res = await sendMessage({ type: 'AUTH_STATE' });
     const user = res?.ok ? res.user ?? null : null;
+    currentUser = user;
     signedOutView.classList.toggle('hidden', Boolean(user));
     signedInView.classList.toggle('hidden', !user);
     configHint.classList.toggle('hidden', !(res?.ok && !res.configured));
+    verifyBanner.classList.toggle('hidden', !user || user.emailVerified === true);
+    syncBtn.disabled = busy || user?.emailVerified !== true;
     if (user) {
       accountEmail.textContent = user.email || '';
       accountAvatar.textContent = (user.email || '?').trim().charAt(0).toUpperCase() || '?';
@@ -101,8 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus(authStatus, 'Enter your email and password.', 'error');
       return;
     }
-    if (kind === 'AUTH_SIGN_UP' && password.length < 6) {
-      setStatus(authStatus, 'Password must be at least 6 characters.', 'error');
+    if (kind === 'AUTH_SIGN_UP' && password.length < 8) {
+      setStatus(authStatus, 'Password must be at least 8 characters.', 'error');
       return;
     }
     setBusy(true);
@@ -115,9 +133,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       setStatus(authStatus, '');
       authPassword.value = '';
-      await refreshAccount();
-      setStatus(syncStatus, 'Merging history…');
-      await syncNow(true);
+      const user = await refreshAccount();
+      if (user && user.emailVerified !== true) {
+        setStatus(
+          syncStatus,
+          kind === 'AUTH_SIGN_UP'
+            ? 'Account created — open the verification email to enable sync.'
+            : 'Verify your email to enable sync.',
+          'warn',
+        );
+      } else {
+        setStatus(syncStatus, 'Merging history…');
+        await syncNow(true);
+      }
     } finally {
       setBusy(false);
     }
@@ -148,6 +176,80 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       setBusy(false);
     }
+  });
+
+  resendBtn.addEventListener('click', async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await sendMessage({ type: 'AUTH_RESEND_VERIFY' });
+      setStatus(
+        syncStatus,
+        res?.ok ? 'Verification email resent — check your inbox.' : res?.error || 'Could not send the email.',
+        res?.ok ? 'success' : 'error',
+      );
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  verifiedBtn.addEventListener('click', async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      // AUTH_STATE re-checks with Firebase while the session is unverified.
+      const user = await refreshAccount();
+      if (user?.emailVerified) {
+        setStatus(syncStatus, 'Email verified — sync enabled.', 'success');
+        await syncNow(true);
+      } else {
+        setStatus(syncStatus, 'Not verified yet — click the link in your email, then try again.', 'warn');
+      }
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  deleteAccountBtn.addEventListener('click', () => {
+    deleteConfirm.classList.toggle('hidden');
+    setStatus(deleteStatus, '');
+    deletePassword.value = '';
+    if (!deleteConfirm.classList.contains('hidden')) deletePassword.focus();
+  });
+  deleteCancelBtn.addEventListener('click', () => {
+    deleteConfirm.classList.add('hidden');
+    setStatus(deleteStatus, '');
+    deletePassword.value = '';
+  });
+
+  async function doDeleteAccount(): Promise<void> {
+    if (busy || !currentUser) return;
+    const password = deletePassword.value;
+    if (!password) {
+      setStatus(deleteStatus, 'Enter your password to confirm.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      setStatus(deleteStatus, 'Deleting account…');
+      const res = await sendMessage({ type: 'AUTH_DELETE', email: currentUser.email, password });
+      if (!res?.ok) {
+        setStatus(deleteStatus, res?.error || 'Delete failed', 'error');
+        return;
+      }
+      deletePassword.value = '';
+      deleteConfirm.classList.add('hidden');
+      setStatus(syncStatus, '');
+      currentUser = null;
+      await refreshAccount();
+      setStatus(authStatus, 'Account and synced history deleted.', 'success');
+    } finally {
+      setBusy(false);
+    }
+  }
+  deleteConfirmBtn.addEventListener('click', doDeleteAccount);
+  deletePassword.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') void doDeleteAccount();
   });
 
   async function loadHistory(): Promise<void> {
@@ -261,6 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadHistory();
   refreshAccount().then((user) => {
-    if (user) syncNow(false).catch(() => {});
+    if (user?.emailVerified) syncNow(false).catch(() => {});
   });
 });

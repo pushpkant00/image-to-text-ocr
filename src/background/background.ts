@@ -4,6 +4,8 @@ import {
   signIn,
   signUp,
   signOut,
+  resendVerification,
+  deleteAccount,
   pushEntry,
   removeEntryFromCloud,
   clearCloudHistory,
@@ -321,6 +323,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'AUTH_SIGN_OUT':
         await signOut();
         sendResponse({ ok: true });
+        break;
+      case 'AUTH_RESEND_VERIFY':
+        await resendVerification();
+        sendResponse({ ok: true });
+        break;
+      case 'AUTH_DELETE':
+        await deleteAccount(msg.email, msg.password);
+        sendResponse({ ok: true, user: null });
         break;
       case 'SYNC_HISTORY':
         sendResponse({ ok: true, stats: await syncHistory() });

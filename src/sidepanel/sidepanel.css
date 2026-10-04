@@ -80,6 +80,62 @@ body {
 }
 .auth-status.error { color: #a4262c; }
 .auth-status.success { color: #2e7d32; }
+.auth-status.warn { color: #8a6d00; }
+.verify-banner {
+  background: #fff8e1;
+  border: 1px solid #e6c95a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.verify-text {
+  font-size: 12px;
+  color: #6b5200;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.verify-actions {
+  display: flex;
+  gap: 14px;
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: #0078d4;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.link-btn:hover:not(:disabled) { color: #005a9e; }
+.link-btn:disabled { opacity: 0.6; cursor: default; }
+.delete-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+.danger-link {
+  background: none;
+  border: none;
+  color: #a4262c;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.danger-link:hover { text-decoration: underline; }
+.delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.delete-confirm input { margin-bottom: 0; }
+.danger {
+  background: #a4262c;
+  color: #fff;
+}
+.danger:hover:not(:disabled) { background: #8e1f24; }
 .auth-hint {
   font-size: 11px;
   color: #999;

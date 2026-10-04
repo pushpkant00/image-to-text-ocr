@@ -26,6 +26,7 @@ interface IdentityResponse {
   idToken?: string;
   refreshToken?: string;
   expiresIn?: string;
+  emailVerified?: boolean;
 }
 
 interface RefreshResponse {
@@ -68,6 +69,51 @@ function requireConfigured(): void {
   if (!isFirebaseConfigured()) {
     throw new Error('Firebase is not configured — add your project keys in src/shared/firebase-config.ts');
   }
+}
+
+// ---------- sign-in backoff (client-side throttle) ----------
+// State lives in chrome.storage.session (cleared when the browser closes).
+const BACKOFF_KEY = 'authBackoff';
+const BACKOFF_THRESHOLD = 5; // failures before the first lockout
+const BACKOFF_BASE_MS = 30_000; // 30s, 60s, 120s, … capped at 5 min
+const BACKOFF_MAX_MS = 300_000;
+
+interface BackoffState {
+  fails?: number;
+  lockedUntil?: number;
+}
+
+async function backoffRemaining(): Promise<number> {
+  const { [BACKOFF_KEY]: state } = await chrome.storage.session.get<Record<typeof BACKOFF_KEY, BackoffState | undefined>>(
+    BACKOFF_KEY,
+  );
+  return Math.max(0, (state?.lockedUntil || 0) - Date.now());
+}
+
+async function recordFailure(): Promise<void> {
+  const { [BACKOFF_KEY]: state } = await chrome.storage.session.get<Record<typeof BACKOFF_KEY, BackoffState | undefined>>(
+    BACKOFF_KEY,
+  );
+  const fails = (state?.fails || 0) + 1;
+  let lockedUntil = 0;
+  if (fails >= BACKOFF_THRESHOLD) {
+    const delay = Math.min(BACKOFF_BASE_MS * 2 ** (fails - BACKOFF_THRESHOLD), BACKOFF_MAX_MS);
+    lockedUntil = Date.now() + delay;
+  }
+  await chrome.storage.session.set({ [BACKOFF_KEY]: { fails, lockedUntil } });
+}
+
+async function clearFailures(): Promise<void> {
+  await chrome.storage.session.remove(BACKOFF_KEY);
+}
+
+async function assertNotLocked(): Promise<void> {
+  const wait = await backoffRemaining();
+  if (wait > 0) throw new Error(`Too many attempts — try again in ${Math.ceil(wait / 1000)}s.`);
+}
+
+function isNetworkError(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith('Network error');
 }
 
 function networkError(): Error {
@@ -121,7 +167,25 @@ async function clearSession(): Promise<void> {
 export async function getAuthState(): Promise<AuthUser | null> {
   const auth = await getSession();
   if (!auth) return null;
-  return { uid: auth.uid, email: auth.email };
+  if (auth.emailVerified !== true) {
+    // Unverified — re-check with Firebase so a just-clicked link is picked up.
+    try {
+      return await refreshVerifiedFlag(auth);
+    } catch {
+      /* offline or expired — fall through to the cached value */
+    }
+  }
+  return { uid: auth.uid, email: auth.email, emailVerified: auth.emailVerified === true };
+}
+
+async function refreshVerifiedFlag(auth: AuthSession): Promise<AuthUser> {
+  const idToken = await getIdToken();
+  const data = await request<{ users?: Array<{ emailVerified?: boolean }> }>(identityUrl('accounts:lookup'), {
+    body: { idToken },
+  });
+  const emailVerified = data.users?.[0]?.emailVerified === true;
+  await saveSession({ ...auth, emailVerified });
+  return { uid: auth.uid, email: auth.email, emailVerified };
 }
 
 async function getIdToken({ force = false }: { force?: boolean } = {}): Promise<string> {
@@ -141,8 +205,8 @@ async function getIdToken({ force = false }: { force?: boolean } = {}): Promise<
   }
 
   const next: AuthSession = {
+    ...auth,
     uid: data.user_id || auth.uid,
-    email: auth.email,
     idToken: data.id_token,
     refreshToken: data.refresh_token || auth.refreshToken,
     expiresAt: Date.now() + Number(data.expires_in || 3600) * 1000,
@@ -161,28 +225,76 @@ async function persistAuth(data: IdentityResponse, email: string): Promise<AuthU
   const auth: AuthSession = {
     uid: data.localId || '',
     email: data.email || email,
+    emailVerified: data.emailVerified === true,
     idToken: data.idToken,
     refreshToken: data.refreshToken || '',
     expiresAt: Date.now() + Number(data.expiresIn || 3600) * 1000,
   };
   await saveSession(auth);
-  return { uid: auth.uid, email: auth.email };
+  return { uid: auth.uid, email: auth.email, emailVerified: auth.emailVerified };
+}
+
+async function sendVerificationEmail(idToken: string): Promise<void> {
+  await request(identityUrl('accounts:sendOobCode'), {
+    body: { requestType: 'VERIFY_EMAIL', idToken },
+  });
 }
 
 export async function signIn(email: string, password: string): Promise<AuthUser> {
   requireConfigured();
-  const data = await request<IdentityResponse>(identityUrl('accounts:signInWithPassword'), {
-    body: { email, password, returnSecureToken: true },
-  });
+  await assertNotLocked();
+  let data: IdentityResponse;
+  try {
+    data = await request<IdentityResponse>(identityUrl('accounts:signInWithPassword'), {
+      body: { email, password, returnSecureToken: true },
+    });
+  } catch (err) {
+    if (!isNetworkError(err)) await recordFailure();
+    throw err;
+  }
+  await clearFailures();
   return persistAuth(data, email);
 }
 
 export async function signUp(email: string, password: string): Promise<AuthUser> {
   requireConfigured();
+  await assertNotLocked();
   const data = await request<IdentityResponse>(identityUrl('accounts:signUp'), {
     body: { email, password, returnSecureToken: true },
   });
-  return persistAuth(data, email);
+  const user = await persistAuth(data, email);
+  // Best-effort: the resend button is available if this fails.
+  if (data.idToken) await sendVerificationEmail(data.idToken).catch(() => {});
+  return user;
+}
+
+export async function resendVerification(): Promise<void> {
+  requireConfigured();
+  const idToken = await getIdToken();
+  await sendVerificationEmail(idToken);
+}
+
+export async function deleteAccount(email: string, password: string): Promise<void> {
+  requireConfigured();
+  await assertNotLocked();
+  // Re-authenticate so the caller must prove ownership of the account.
+  let idToken: string | undefined;
+  try {
+    const data = await request<IdentityResponse>(identityUrl('accounts:signInWithPassword'), {
+      body: { email, password, returnSecureToken: true },
+    });
+    idToken = data.idToken;
+  } catch (err) {
+    if (!isNetworkError(err)) await recordFailure();
+    throw err;
+  }
+  await clearFailures();
+  // Best-effort cloud wipe while the fresh token is valid, then delete the
+  // account itself (which also invalidates the tokens).
+  await clearCloudHistory().catch(() => {});
+  await request(identityUrl('accounts:delete'), { body: { idToken } });
+  await clearSession();
+  await chrome.storage.local.remove('history');
 }
 
 export async function signOut(): Promise<void> {
@@ -369,6 +481,7 @@ export async function pushEntry(entry: OCRHistoryEntry): Promise<void> {
   if (!entry?.text) return;
   const auth = await getSession();
   if (!auth) return; // signed out — local history only
+  if (auth.emailVerified !== true) return; // silent — UI shows the verify banner
   await putEntries([entry]);
 }
 
@@ -389,6 +502,7 @@ export async function syncHistory(): Promise<SyncStats> {
   requireConfigured();
   const auth = await getSession();
   if (!auth) throw new Error('Not signed in.');
+  if (auth.emailVerified !== true) throw new Error('Verify your email address to enable sync.');
 
   const cloud = await listHistory();
   const { history: local = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });

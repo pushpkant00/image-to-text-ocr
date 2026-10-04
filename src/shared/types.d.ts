@@ -36,6 +36,7 @@ interface OcrRunPayload {
 interface AuthUser {
   uid: string;
   email: string;
+  emailVerified?: boolean;
 }
 
 interface AuthSession extends AuthUser {
@@ -71,6 +72,8 @@ type BackgroundRequest =
   | { type: 'AUTH_SIGN_IN'; email: string; password: string }
   | { type: 'AUTH_SIGN_UP'; email: string; password: string }
   | { type: 'AUTH_SIGN_OUT' }
+  | { type: 'AUTH_RESEND_VERIFY' }
+  | { type: 'AUTH_DELETE'; email: string; password: string }
   | { type: 'SYNC_HISTORY' }
   | { type: 'OCR_RUN'; payload: OcrRunPayload };
 
