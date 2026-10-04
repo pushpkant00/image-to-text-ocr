@@ -112,6 +112,7 @@ src/
   sidepanel/             history panel: search, filter, copy, delete, sign in/out
   shared/                ambient type definitions (types.d.ts) + Firebase config
 icons/                   extension icons
+docs/                    landing page (GitHub Pages, served from /docs)
 ```
 
 ## Permissions — why each is needed
@@ -143,6 +144,10 @@ No analytics. The OCR path makes no network calls (after the one-time language d
 - Chrome Manifest V3, **TypeScript** (strict mode, compiled with `tsc`) + vanilla HTML/CSS — no framework, no bundler
 - `npm run lint` type-checks without emitting (`tsc --noEmit`)
 - [Tesseract.js v5](https://github.com/naptha/tesseract.js) (LSTM OCR, WebAssembly) — fully local
+
+## Website
+
+A static landing page lives in [`docs/`](docs/) (plain HTML/CSS, no build step, no JS). To publish it with GitHub Pages: repo **Settings → Pages → Deploy from a branch → `main` → `/docs`**, then it serves at `https://pushpkant00.github.io/image-to-text-ocr/`.
 
 ## License
 
