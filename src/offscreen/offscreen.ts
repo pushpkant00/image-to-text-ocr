@@ -53,11 +53,25 @@
     return canvas.toDataURL('image/png');
   }
 
+  // Only English ships in the package; other languages are fetched from the
+  // jsdelivr CDN (langPath unset -> tesseract.js default). Probe the bundled
+  // file first so English keeps working offline.
+  async function hasBundledLang(lang: string): Promise<boolean> {
+    try {
+      const r = await fetch(chrome.runtime.getURL(`libs/tesseract/lang-data/${lang}.traineddata.gz`));
+      if (!r.ok) return false;
+      await r.body?.cancel();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function getWorker(language?: string): Promise<OcrWorker> {
     const lang = language || 'eng';
     if (!workerPromiseByLang[lang]) {
       workerPromiseByLang[lang] = (async () => {
-        const w = await Tesseract.createWorker(lang, 1, {
+        const opts: Record<string, unknown> = {
           logger: () => {},
           // Spawn the worker directly from the extension URL. The default
           // blob-worker bootstrap (blob URL running importScripts on the
@@ -65,10 +79,13 @@
           workerBlobURL: false,
           workerPath: chrome.runtime.getURL('libs/tesseract/worker.min.js'),
           corePath: chrome.runtime.getURL('libs/tesseract'),
-          langPath: chrome.runtime.getURL('libs/tesseract/lang-data'),
           cacheMethod: 'none',
           gzip: true,
-        });
+        };
+        if (await hasBundledLang(lang)) {
+          opts.langPath = chrome.runtime.getURL('libs/tesseract/lang-data');
+        }
+        const w = await Tesseract.createWorker(lang, 1, opts);
         return w;
       })().catch((e: unknown) => {
         delete workerPromiseByLang[lang];
