@@ -107,7 +107,7 @@ async function fetchAsDataUrl(url: string): Promise<string> {
 async function processResult(
   raw: RawOcrResult,
   settings: OCRSettings,
-  extra: Partial<Pick<OCRHistoryEntry, 'area'>> = {},
+  extra: Partial<Pick<OCRHistoryEntry, 'area' | 'language'>> = {},
 ): Promise<OCRHistoryEntry> {
   const text = cleanText(raw.text || '', {
     removeLineBreaks: settings.removeLineBreaks,
@@ -158,7 +158,7 @@ async function ocrSelection({
     dpr: dpr || 1,
   });
   if (raw?.error) throw new Error(raw.error);
-  return await processResult(raw, settings, { area });
+  return await processResult(raw, settings, { area, language: language || settings.language });
 }
 
 // ---------- install ----------
@@ -276,7 +276,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           language: msg.language || settings.language,
         });
         if (raw?.error) throw new Error(raw.error);
-        const entry = await processResult(raw, settings);
+        const entry = await processResult(raw, settings, { language: msg.language || settings.language });
         sendResponse({ ok: true, entry });
         break;
       }
