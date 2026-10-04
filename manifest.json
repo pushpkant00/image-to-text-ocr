@@ -4,8 +4,8 @@
   "name": "Image to Text OCR",
   "version": "1.0.0",
   "description": "Extract text from images using on-device OCR. Right-click any image or select a region to copy text instantly.",
-  "permissions": ["activeTab", "contextMenus", "storage", "offscreen", "scripting", "sidePanel", "tabs", "notifications"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["activeTab", "contextMenus", "storage", "offscreen", "scripting", "sidePanel", "notifications"],
+  "host_permissions": ["http://*/*", "https://*/*", "file:///*"],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
@@ -36,7 +36,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://*/*", "https://*/*", "file:///*"],
       "js": ["content/selection-overlay.js"],
       "css": ["content/content.css"],
       "run_at": "document_idle"
@@ -44,8 +44,8 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["libs/tesseract/*", "icons/icon16.png"],
-      "matches": ["<all_urls>"]
+      "resources": ["icons/icon16.png"],
+      "matches": ["http://*/*", "https://*/*", "file:///*"]
     }
   ],
   "icons": {

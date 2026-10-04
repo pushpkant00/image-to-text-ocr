@@ -119,13 +119,13 @@ docs/                    landing page (GitHub Pages, served from /docs)
 
 | Permission | Used for |
 |---|---|
-| `activeTab`, `scripting`, `tabs` | Capture the visible tab & inject the selection overlay |
+| `activeTab`, `scripting` | Capture the visible tab & inject the selection overlay |
 | `contextMenus` | Right-click → extract text from image |
 | `storage` | Settings (sync) + history (local) |
 | `offscreen` | Host the OCR engine outside the service worker |
 | `sidePanel` | Open the history panel after OCR |
 | `notifications` | Tell you when a page blocks extensions |
-| `<all_urls>` (host) | Run on any site; fetch right-clicked images for OCR |
+| `http://*/*`, `https://*/*`, `file:///*` (host) | Run on normal sites; fetch right-clicked images for OCR |
 
 No analytics. The OCR path makes no network calls (after the one-time language download); the only other traffic is Firebase auth/history sync, and only when you sign in.
 

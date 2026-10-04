@@ -198,8 +198,14 @@ function isRestrictedUrl(url = ''): boolean {
   return /^(chrome|edge|about|chrome-extension|moz-extension|view-source):|^https:\/\/(chrome\.google\.com\/webstore|microsoftedge\.microsoft\.com\/addons)/.test(url);
 }
 
-function notifyBlocked(tab?: chrome.tabs.Tab): void {
-  const where = isRestrictedUrl(tab?.url)
+// Without the "tabs" permission Chrome hides tab.url for restricted schemes,
+// so also detect the restriction from the injection error text.
+function isBlockedError(error?: string): boolean {
+  return Boolean(error && /cannot access|chrome:\/\//i.test(error));
+}
+
+function notifyBlocked(tab: chrome.tabs.Tab | undefined, error?: string): void {
+  const where = isRestrictedUrl(tab?.url) || isBlockedError(error)
     ? 'Extensions cannot run on this page (try a normal website like wikipedia.org).'
     : 'Could not reach the page. Refresh the tab and try again.';
   chrome.notifications
@@ -235,7 +241,7 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (command !== 'capture-selection') return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const res = await triggerSelection(tab);
-  if (!res.ok) notifyBlocked(tab);
+  if (!res.ok) notifyBlocked(tab, res.error);
 });
 
 // ---------- messages ----------
@@ -278,7 +284,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // from popup button: forward to active tab (with injection fallback)
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const res = await triggerSelection(tab);
-        if (!res.ok && isRestrictedUrl(tab?.url)) {
+        if (!res.ok && (isRestrictedUrl(tab?.url) || isBlockedError(res.error))) {
           sendResponse({ ok: false, error: 'BLOCKED_PAGE' });
         } else {
           sendResponse(res);
