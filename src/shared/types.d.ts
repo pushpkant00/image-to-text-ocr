@@ -54,6 +54,8 @@ interface SyncStats {
 interface LocalStorage {
   history?: OCRHistoryEntry[];
   auth?: AuthSession | null;
+  /** Raw sync-encryption keys, keyed by account uid (see background/crypto.ts). */
+  syncKeys?: Record<string, string>;
 }
 
 interface SyncStorage extends OCRSettings {}

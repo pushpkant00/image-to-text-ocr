@@ -1,4 +1,16 @@
 import { FIREBASE_CONFIG, isFirebaseConfigured } from '../shared/firebase-config.js';
+import {
+  ENC_PREFIX,
+  LOCKED_TEXT,
+  b64,
+  unb64,
+  generateKeyBytes,
+  wrapSyncKey,
+  unwrapSyncKey,
+  importSyncKey,
+  encryptText,
+  decryptText,
+} from './crypto.js';
 
 const AUTH_KEY = 'auth';
 const HISTORY_LIMIT = 100;
@@ -253,7 +265,9 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
     throw err;
   }
   await clearFailures();
-  return persistAuth(data, email);
+  const user = await persistAuth(data, email);
+  await ensureSyncKey(password); // throw → sign-in reports the setup failure
+  return user;
 }
 
 export async function signUp(email: string, password: string): Promise<AuthUser> {
@@ -265,6 +279,7 @@ export async function signUp(email: string, password: string): Promise<AuthUser>
   const user = await persistAuth(data, email);
   // Best-effort: the resend button is available if this fails.
   if (data.idToken) await sendVerificationEmail(data.idToken).catch(() => {});
+  await ensureSyncKey(password);
   return user;
 }
 
@@ -294,11 +309,129 @@ export async function deleteAccount(email: string, password: string): Promise<vo
   await clearCloudHistory().catch(() => {});
   await request(identityUrl('accounts:delete'), { body: { idToken } });
   await clearSession();
-  await chrome.storage.local.remove('history');
+  await chrome.storage.local.remove(['history', 'syncKeys']);
 }
 
 export async function signOut(): Promise<void> {
+  const auth = await getSession();
   await clearSession();
+  // Drop this device's cached sync key — it is re-derived from the password
+  // on the next sign-in, so a signed-out profile cannot decrypt cloud data.
+  if (auth) {
+    const { syncKeys = {} } = await chrome.storage.local.get<LocalStorage>({ syncKeys: {} });
+    delete syncKeys[auth.uid];
+    await chrome.storage.local.set({ syncKeys });
+  }
+}
+
+// ---------- sync encryption key (see background/crypto.ts) ----------
+const SYNC_KEYS_LOCAL = 'syncKeys';
+
+interface SyncProfile {
+  salt: string; // base64 (32 random bytes)
+  wrappedKey: string; // base64(iv‖ct) — syncKey wrapped with PBKDF2(password, salt)
+  v?: number;
+}
+
+function profileDocUrl(uid: string): string {
+  // 4 segments (…/users/{uid}/profile/main) so it is a real document path
+  // and matches the documented rule: match /users/{userId}/{doc=**}
+  return `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/users/${uid}/profile/main`;
+}
+
+async function getProfile(uid: string): Promise<SyncProfile | null> {
+  const token = await getIdToken();
+  const res = await fetch(profileDocUrl(uid), { headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 404) return null;
+  if (!res.ok) throw await firestoreError(res);
+  const doc = (await res.json().catch(() => null)) as FirestoreDoc | null;
+  const fields = fromFields(doc?.fields);
+  if (typeof fields.salt !== 'string' || typeof fields.wrappedKey !== 'string') return null;
+  return { salt: fields.salt, wrappedKey: fields.wrappedKey, v: Number(fields.v) || 1 };
+}
+
+async function createProfileIfMissing(uid: string, profile: SyncProfile): Promise<boolean> {
+  const token = await getIdToken();
+  const res = await fetch(`${profileDocUrl(uid)}?currentDocument.exists=false`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      fields: toFields({ salt: profile.salt, wrappedKey: profile.wrappedKey, v: profile.v || 1 }),
+    }),
+  });
+  if (res.status === 409) return false; // another device created it first
+  if (!res.ok) throw await firestoreError(res);
+  return true;
+}
+
+async function updateProfile(uid: string, profile: SyncProfile): Promise<void> {
+  const token = await getIdToken();
+  const res = await fetch(profileDocUrl(uid), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      fields: toFields({ salt: profile.salt, wrappedKey: profile.wrappedKey, v: profile.v || 1 }),
+    }),
+  });
+  if (!res.ok) throw await firestoreError(res);
+}
+
+/** Raw syncKey for the signed-in account, cached on-device. Null when signed out / not yet set up. */
+async function getSyncKey(): Promise<CryptoKey | null> {
+  const auth = await getSession();
+  if (!auth) return null;
+  const { [SYNC_KEYS_LOCAL]: keys = {} } = await chrome.storage.local.get<Record<string, Record<string, string>>>(
+    SYNC_KEYS_LOCAL,
+  );
+  const rawB64 = keys[auth.uid];
+  if (!rawB64) return null;
+  try {
+    return await importSyncKey(unb64(rawB64));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Make sure this device holds the account's syncKey. Called on every
+ * sign-in/sign-up with the password (the only moment it is available).
+ * - No cloud profile yet → generate a key, wrap it, create the profile.
+ * - Profile exists → unwrap it (normal path).
+ * - Unwrap fails → password was changed: re-wrap this device's cached key if
+ *   we have one, otherwise start a fresh key (older ciphertext becomes
+ *   permanently locked, shown as LOCKED_TEXT).
+ */
+async function ensureSyncKey(password: string): Promise<void> {
+  const auth = await getSession();
+  if (!auth) return;
+  const { [SYNC_KEYS_LOCAL]: keys = {} } = await chrome.storage.local.get<Record<string, Record<string, string>>>(
+    SYNC_KEYS_LOCAL,
+  );
+  const cached = keys[auth.uid];
+
+  let profile = await getProfile(auth.uid);
+  const salt = profile ? unb64(profile.salt) : crypto.getRandomValues(new Uint8Array(32));
+  let raw: Uint8Array<ArrayBuffer> | null = profile ? await unwrapSyncKey(profile.wrappedKey, password, salt) : null;
+
+  if (!raw) {
+    if (profile) {
+      raw = cached ? unb64(cached) : generateKeyBytes();
+      await updateProfile(auth.uid, { ...profile, wrappedKey: await wrapSyncKey(raw, password, salt) });
+    } else {
+      raw = generateKeyBytes();
+      const wrappedKey = await wrapSyncKey(raw, password, salt);
+      const created = await createProfileIfMissing(auth.uid, { salt: b64(salt), wrappedKey, v: 1 });
+      if (!created) {
+        // Lost a create race with another device — adopt its key.
+        profile = await getProfile(auth.uid);
+        raw = profile ? await unwrapSyncKey(profile.wrappedKey, password, unb64(profile.salt)) : null;
+        if (!raw) throw new Error('Could not set up sync encryption — try signing in again.');
+      }
+    }
+  }
+
+  if (!raw) throw new Error('Could not set up sync encryption — try signing in again.');
+  await chrome.storage.local.set({ [SYNC_KEYS_LOCAL]: { ...keys, [auth.uid]: b64(raw) } });
 }
 
 // ---------- firestore (REST) ----------
@@ -430,15 +563,40 @@ async function firestoreFetch(url: string, init: RequestInit = {}): Promise<Resp
   return res;
 }
 
-async function listHistory(): Promise<OCRHistoryEntry[]> {
+interface CloudHistory {
+  entries: OCRHistoryEntry[];
+  /** Ids of cloud docs still stored as pre-encryption plaintext. */
+  legacyIds: Set<string>;
+}
+
+async function listHistoryCloud(): Promise<CloudHistory> {
+  const empty: CloudHistory = { entries: [], legacyIds: new Set() };
   const auth = await getSession();
-  if (!auth) return [];
+  if (!auth) return empty;
   requireConfigured();
   const res = await firestoreFetch(`${collectionName(auth.uid)}?pageSize=${HISTORY_LIMIT}`);
-  if (res.status === 404) return []; // Firestore database not created yet
+  if (res.status === 404) return empty; // Firestore database not created yet
   if (!res.ok) throw await firestoreError(res);
   const data = (await res.json().catch(() => ({}))) as FirestoreResponse;
-  return (data.documents || []).map(parseDoc).filter((e): e is OCRHistoryEntry => e !== null);
+  const key = await getSyncKey();
+  const entries: OCRHistoryEntry[] = [];
+  const legacyIds = new Set<string>();
+  for (const doc of data.documents || []) {
+    const entry = parseDoc(doc);
+    if (!entry) continue;
+    if (entry.text.startsWith(ENC_PREFIX)) {
+      const plain = key ? await decryptText(entry.text, key) : null;
+      entry.text = plain ?? LOCKED_TEXT;
+    } else {
+      legacyIds.add(entry.id);
+    }
+    entries.push(entry);
+  }
+  return { entries, legacyIds };
+}
+
+async function listHistory(): Promise<OCRHistoryEntry[]> {
+  return (await listHistoryCloud()).entries;
 }
 
 async function batchWrite(writes: Record<string, unknown>[]): Promise<void> {
@@ -458,10 +616,14 @@ async function putEntries(entries: OCRHistoryEntry[]): Promise<void> {
   if (!entries.length) return;
   const auth = await getSession();
   if (!auth) return;
+  const key = await getSyncKey();
+  if (!key) throw new Error('Sync encryption key unavailable — sign out and sign in again to restore it.');
   for (let i = 0; i < entries.length; i += WRITE_CHUNK) {
-    const writes = entries.slice(i, i + WRITE_CHUNK).map((entry) => ({
-      update: { name: docName(auth.uid, entry.id), fields: entryFields(entry) },
-    }));
+    const writes: Record<string, unknown>[] = [];
+    for (const entry of entries.slice(i, i + WRITE_CHUNK)) {
+      const fields = entryFields({ ...entry, text: await encryptText(entry.text || '', key) });
+      writes.push({ update: { name: docName(auth.uid, entry.id), fields } });
+    }
     await batchWrite(writes);
   }
 }
@@ -503,8 +665,9 @@ export async function syncHistory(): Promise<SyncStats> {
   const auth = await getSession();
   if (!auth) throw new Error('Not signed in.');
   if (auth.emailVerified !== true) throw new Error('Verify your email address to enable sync.');
+  if (!(await getSyncKey())) throw new Error('Sync encryption key unavailable — sign out and sign in again to restore it.');
 
-  const cloud = await listHistory();
+  const { entries: cloud, legacyIds } = await listHistoryCloud();
   const { history: local = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });
 
   const byId = new Map<string, OCRHistoryEntry>();
@@ -519,10 +682,12 @@ export async function syncHistory(): Promise<SyncStats> {
   const mergedIds = new Set(merged.map((entry) => entry.id));
   const cloudIds = new Set(cloud.map((entry) => entry.id));
   const toUpload = merged.filter((entry) => !cloudIds.has(entry.id));
+  // Pre-encryption cloud docs: rewrite them encrypted under the same id.
+  const toEncrypt = merged.filter((entry) => legacyIds.has(entry.id));
   const toDelete = cloud.filter((entry) => !mergedIds.has(entry.id)).map((entry) => entry.id);
 
-  await putEntries(toUpload);
+  await putEntries([...toUpload, ...toEncrypt]);
   await deleteEntries(toDelete);
 
-  return { uploaded: toUpload.length, removed: toDelete.length, total: merged.length };
+  return { uploaded: toUpload.length + toEncrypt.length, removed: toDelete.length, total: merged.length };
 }
