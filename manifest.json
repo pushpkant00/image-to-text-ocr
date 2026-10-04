@@ -44,7 +44,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["libs/tesseract/*"],
+      "resources": ["libs/tesseract/*", "icons/icon16.png"],
       "matches": ["<all_urls>"]
     }
   ],

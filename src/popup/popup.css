@@ -84,7 +84,8 @@ select {
   margin-bottom: 8px;
   color: #666;
 }
-.sparkle-icon {
+.result-icon {
+  display: block;
   width: 14px;
   height: 14px;
 }

@@ -138,8 +138,7 @@ interface Window {
     }
   }
 
-  const SPARKLE_SVG =
-    '<svg class="ocr-card-icon" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="ocrSparkleGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0078d4"/><stop offset="1" stop-color="#ffb900"/></linearGradient></defs><path fill="url(#ocrSparkleGrad)" d="M12 2 Q13.5 10.5 22 12 Q13.5 13.5 12 22 Q10.5 13.5 2 12 Q10.5 10.5 12 2 Z"/></svg>';
+  const EXT_ICON = chrome.runtime.getURL('icons/icon16.png');
   const EYE_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
   const COPY_SVG =
@@ -152,7 +151,7 @@ interface Window {
     card.className = 'ocr-result-card';
     card.innerHTML = `
       <div class="ocr-result-header">
-        <span class="ocr-result-title">${SPARKLE_SVG}<span class="ocr-result-heading">Text extracted</span></span>
+        <span class="ocr-result-title"><img class="ocr-card-icon" src="${EXT_ICON}" alt=""><span class="ocr-result-heading">Text extracted</span></span>
         <button type="button" class="ocr-result-close" title="Close">×</button>
       </div>
       <div class="ocr-result-meta"></div>
