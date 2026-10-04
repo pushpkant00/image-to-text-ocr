@@ -129,6 +129,8 @@ docs/                    landing page (GitHub Pages, served from /docs)
 
 No analytics. The OCR path makes no network calls (after the one-time language download); the only other traffic is Firebase auth/history sync, and only when you sign in.
 
+Full details in [PRIVACY.md](PRIVACY.md).
+
 ## Troubleshooting
 
 | Symptom | Fix |
