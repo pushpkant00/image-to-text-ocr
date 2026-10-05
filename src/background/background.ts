@@ -280,17 +280,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: true, entry });
         break;
       }
-      case 'START_SELECTION_POPUP': {
-        // from popup button: forward to active tab (with injection fallback)
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        const res = await triggerSelection(tab);
-        if (!res.ok && (isRestrictedUrl(tab?.url) || isBlockedError(res.error))) {
-          sendResponse({ ok: false, error: 'BLOCKED_PAGE' });
-        } else {
-          sendResponse(res);
-        }
-        break;
-      }
       case 'GET_SETTINGS':
         sendResponse({ ok: true, settings: await getSettings() });
         break;

@@ -64,7 +64,6 @@ interface SyncStorage extends OCRSettings {}
 type BackgroundRequest =
   | { type: 'OCR_CAPTURE'; area: SelectionArea; dpr: number; language?: string }
   | { type: 'OCR_IMAGE_DATA'; imageData: string; language?: string }
-  | { type: 'START_SELECTION_POPUP' }
   | { type: 'GET_SETTINGS' }
   | { type: 'SAVE_SETTINGS'; settings: Partial<OCRSettings> }
   | { type: 'GET_HISTORY' }

@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const q = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
-  const selectBtn = q<HTMLButtonElement>('ocr-select-btn');
   const fileInput = q<HTMLInputElement>('ocr-file');
   const languageSelect = q<HTMLSelectElement>('language-select');
   const removeBreaks = q<HTMLInputElement>('remove-breaks');
   const mergeSpaces = q<HTMLInputElement>('merge-spaces');
   const lastResult = q<HTMLElement>('last-result');
   const lastText = q<HTMLElement>('last-text');
+  const lastAccuracy = q<HTMLElement>('last-accuracy');
   const copyLastBtn = q<HTMLButtonElement>('copy-last-btn');
   const viewHistoryBtn = q<HTMLButtonElement>('view-history-btn');
   const statusEl = q<HTMLElement>('ocr-status');
@@ -40,18 +40,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   removeBreaks.addEventListener('change', saveSettings);
   mergeSpaces.addEventListener('change', saveSettings);
 
-  // --- select area on page ---
-  selectBtn.addEventListener('click', async () => {
-    const res = await chrome.runtime.sendMessage({ type: 'START_SELECTION_POPUP' });
-    if (res?.ok) {
-      window.close();
-    } else if (res?.error === 'BLOCKED_PAGE') {
-      setStatus('This page blocks extensions (e.g. chrome:// pages, new tab, web store). Open a normal website and try again.', false);
-    } else {
-      setStatus('Could not reach the page: ' + (res?.error || 'unknown error') + '. Refresh the tab and retry.', false);
-    }
-  });
-
   // --- OCR from file / paste ---
   function fileToDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -67,14 +55,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await chrome.runtime.sendMessage({ type: 'OCR_IMAGE_DATA', imageData });
       if (!res?.ok) throw new Error(res?.error || 'OCR failed');
-      const text: string = res.entry?.text || '';
+      const entry = res.entry as OCRHistoryEntry | undefined;
       setStatus('');
-      if (!text) {
+      if (!entry?.text) {
         setStatus('No text found in that image.', false);
         return;
       }
-      showLast(text);
-      setStatus(`Extracted ${text.length} chars — preview or copy below.`, false);
+      showLast(entry);
+      setStatus(`Extracted ${entry.text.length} chars — copy below.`, false);
     } catch (err) {
       setStatus('Failed: ' + (err instanceof Error ? err.message : String(err)), false);
     }
@@ -95,33 +83,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // --- history ---
-  const previewLastBtn = q<HTMLButtonElement>('preview-last-btn');
+  // --- last result (accuracy + first line, copy only) ---
   let lastFullText = '';
-  let lastExpanded = false;
 
   function setLabel(btn: HTMLButtonElement, text: string): void {
     const span = btn.querySelector('span');
     if (span) span.textContent = text;
   }
 
-  function renderLast(): void {
-    lastResult.classList.toggle('expanded', lastExpanded);
-    lastText.textContent =
-      !lastExpanded && lastFullText.length > 500 ? lastFullText.slice(0, 500) + '…' : lastFullText;
-    setLabel(previewLastBtn, lastExpanded ? 'Collapse' : 'Preview');
-  }
-
-  function showLast(text: string): void {
+  function showLast(entry: OCRHistoryEntry): void {
+    const text = (entry.text || '').trim();
     lastFullText = text;
     lastResult.classList.remove('hidden');
-    renderLast();
+
+    const confidence = Math.max(0, Math.min(100, Math.round(entry.confidence || 0)));
+    lastAccuracy.textContent = `${confidence}% accuracy`;
+    lastAccuracy.classList.remove('is-high', 'is-mid', 'is-low');
+    lastAccuracy.classList.add(confidence >= 80 ? 'is-high' : confidence >= 50 ? 'is-mid' : 'is-low');
+
+    const firstLine = text.split(/\r?\n/).find((line) => line.trim().length > 0) || 'No text';
+    lastText.textContent = firstLine;
   }
 
-  previewLastBtn.addEventListener('click', () => {
-    lastExpanded = !lastExpanded;
-    renderLast();
-  });
   copyLastBtn.addEventListener('click', async () => {
     await navigator.clipboard.writeText(lastFullText);
     setLabel(copyLastBtn, 'Copied!');
@@ -135,7 +118,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function loadLastResult(): Promise<void> {
     const res = await chrome.runtime.sendMessage({ type: 'GET_HISTORY' });
-    if (res?.ok && res.history.length > 0) showLast(res.history[0].text);
+    const history: OCRHistoryEntry[] = res?.ok && Array.isArray(res.history) ? res.history : [];
+    if (history.length > 0) showLast(history[0]);
   }
 
   await loadSettings();

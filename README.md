@@ -45,7 +45,7 @@ Then **Load unpacked** → `dist/` (see above).
 |---|---|
 | Select area | `Ctrl+Shift+X`, drag a box, release |
 | Image on a page | Right-click → *Extract text from this image* |
-| File / screenshot | Extension icon → *OCR Image File* or paste with `Ctrl+V` |
+| File / screenshot | Extension icon → *Upload Image File* or paste with `Ctrl+V` |
 | History | Extension icon → *Open History Panel* |
 | Settings | Language, line-break/space cleanup (in the popup, synced across devices) |
 
