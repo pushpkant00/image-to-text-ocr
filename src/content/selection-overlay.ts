@@ -151,7 +151,7 @@ interface Window {
     card.className = 'ocr-result-card';
     card.innerHTML = `
       <div class="ocr-result-header">
-        <span class="ocr-result-title"><img class="ocr-card-icon" src="${EXT_ICON}" alt=""><span class="ocr-result-heading">Text extracted</span></span>
+        <span class="ocr-result-title"><img class="ocr-card-icon" src="${EXT_ICON}" alt=""><span class="ocr-result-heading">Text extracted</span><span class="ocr-result-confidence"></span></span>
         <button type="button" class="ocr-result-close" title="Close">×</button>
       </div>
       <div class="ocr-result-meta"></div>
@@ -165,6 +165,11 @@ interface Window {
     textEl.textContent = text;
     q<HTMLElement>(card, '.ocr-result-meta').textContent =
       `${text.length} chars · ${entry.confidence || 0}% confidence · ${entry.language || ''}`;
+    const confidence = Math.max(0, Math.min(100, Math.round(entry.confidence || 0)));
+    const confidenceEl = q<HTMLElement>(card, '.ocr-result-confidence');
+    confidenceEl.textContent = `${confidence}% accuracy`;
+    confidenceEl.title = `OCR confidence: ${confidence}%`;
+    confidenceEl.classList.add(confidence >= 80 ? 'is-high' : confidence >= 50 ? 'is-mid' : 'is-low');
     q<HTMLButtonElement>(card, '.ocr-result-close').addEventListener('click', () => card.remove());
 
     const heading = q<HTMLElement>(card, '.ocr-result-heading');

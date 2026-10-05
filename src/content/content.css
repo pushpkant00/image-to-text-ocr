@@ -81,6 +81,17 @@
   height: 13px;
   display: block;
 }
+.ocr-result-confidence {
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.ocr-result-confidence.is-high { background: #dff6dd; color: #0b6a0b; }
+.ocr-result-confidence.is-mid { background: #fff4ce; color: #7a5200; }
+.ocr-result-confidence.is-low { background: #fde7e9; color: #a4262c; }
 .ocr-result-close {
   background: none;
   border: none;
@@ -126,7 +137,7 @@
   bottom: 3px;
   width: 10px;
   height: 10px;
-  background: repeating-linear-gradient(135deg, transparent 0 3px, #999 3px 4px);
+  background: repeating-linear-gradient(45deg, transparent 0 3px, #999 3px 4px);
 }
 .ocr-result-footer {
   padding: 4px 9px 9px;
