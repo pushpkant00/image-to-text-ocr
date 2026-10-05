@@ -9,53 +9,8 @@
     <div class="header">
       <h2>OCR History</h2>
       <div class="header-actions">
+        <button id="account-btn" title="Sign in">Sign in</button>
         <button id="clear-history-btn" title="Clear History">🗑️</button>
-      </div>
-    </div>
-    <div class="account-card" id="account-card">
-      <div id="signed-out-view">
-        <div class="account-title">Sign in to sync your history</div>
-        <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
-        <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
-        <div id="auth-status" class="auth-status hidden"></div>
-        <div class="account-actions">
-          <button id="sign-in-btn" class="primary">Sign In</button>
-          <button id="sign-up-btn" class="secondary">Create Account</button>
-        </div>
-        <div class="auth-hint">Passwords must be at least 8 characters. New accounts must verify their email to sync.</div>
-        <div id="config-hint" class="auth-hint hidden">
-          Cloud sync is off — add your Firebase config in <code>src/shared/firebase-config.ts</code>.
-        </div>
-      </div>
-      <div id="signed-in-view" class="hidden">
-        <div class="account-user">
-          <span id="account-avatar" class="avatar">?</span>
-          <span id="account-email" class="account-email"></span>
-        </div>
-        <div id="verify-banner" class="verify-banner hidden">
-          <div class="verify-text">Verify your email to enable sync.</div>
-          <div class="verify-actions">
-            <button id="resend-btn" class="link-btn">Resend email</button>
-            <button id="verified-btn" class="link-btn">I've verified</button>
-          </div>
-        </div>
-        <div id="sync-status" class="auth-status hidden"></div>
-        <div class="account-actions">
-          <button id="sync-btn" class="primary">Sync Now</button>
-          <button id="sign-out-btn" class="secondary">Sign Out</button>
-        </div>
-        <div class="delete-row">
-          <button id="delete-account-btn" class="danger-link">Delete account…</button>
-          <div id="delete-confirm" class="delete-confirm hidden">
-            <div class="auth-hint">Deletes your account, cloud history, and this device's history. Enter your password to confirm.</div>
-            <input type="password" id="delete-password" placeholder="Password" autocomplete="current-password">
-            <div id="delete-status" class="auth-status hidden"></div>
-            <div class="account-actions">
-              <button id="delete-confirm-btn" class="danger">Delete everything</button>
-              <button id="delete-cancel-btn" class="secondary">Cancel</button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
     <div class="filters">

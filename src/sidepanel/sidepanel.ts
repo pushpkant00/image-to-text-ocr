@@ -2,8 +2,6 @@ interface RuntimeResponse {
   ok?: boolean;
   error?: string;
   user?: AuthUser | null;
-  configured?: boolean;
-  stats?: SyncStats;
   history?: OCRHistoryEntry[];
 }
 
@@ -30,231 +28,40 @@ document.addEventListener('DOMContentLoaded', () => {
   const backBtn = q<HTMLButtonElement>('back-btn');
   const headerTitle = qs<HTMLHeadingElement>('.header h2');
   const filters = qs<HTMLElement>('.filters');
-
-  // account / cloud sync
-  const accountCard = q<HTMLDivElement>('account-card');
-  const signedOutView = q<HTMLDivElement>('signed-out-view');
-  const signedInView = q<HTMLDivElement>('signed-in-view');
-  const authEmail = q<HTMLInputElement>('auth-email');
-  const authPassword = q<HTMLInputElement>('auth-password');
-  const authStatus = q<HTMLDivElement>('auth-status');
-  const signInBtn = q<HTMLButtonElement>('sign-in-btn');
-  const signUpBtn = q<HTMLButtonElement>('sign-up-btn');
-  const configHint = q<HTMLDivElement>('config-hint');
-  const accountAvatar = q<HTMLSpanElement>('account-avatar');
-  const accountEmail = q<HTMLSpanElement>('account-email');
-  const syncStatus = q<HTMLDivElement>('sync-status');
-  const syncBtn = q<HTMLButtonElement>('sync-btn');
-  const signOutBtn = q<HTMLButtonElement>('sign-out-btn');
-  const verifyBanner = q<HTMLDivElement>('verify-banner');
-  const resendBtn = q<HTMLButtonElement>('resend-btn');
-  const verifiedBtn = q<HTMLButtonElement>('verified-btn');
-  const deleteAccountBtn = q<HTMLButtonElement>('delete-account-btn');
-  const deleteConfirm = q<HTMLDivElement>('delete-confirm');
-  const deletePassword = q<HTMLInputElement>('delete-password');
-  const deleteStatus = q<HTMLDivElement>('delete-status');
-  const deleteConfirmBtn = q<HTMLButtonElement>('delete-confirm-btn');
-  const deleteCancelBtn = q<HTMLButtonElement>('delete-cancel-btn');
+  const accountBtn = q<HTMLButtonElement>('account-btn');
 
   let history: OCRHistoryEntry[] = [];
   let currentDetail: OCRHistoryEntry | null = null;
-  let currentUser: AuthUser | null = null;
-  let busy = false;
 
-  function setStatus(el: HTMLElement, message: string, kind = ''): void {
-    el.textContent = message;
-    el.classList.remove('hidden', 'error', 'success', 'warn');
-    if (message) el.classList.add(kind);
-    else el.classList.add('hidden');
+  async function sendMessage<T = RuntimeResponse>(message: BackgroundRequest): Promise<T> {
+    const res = (await chrome.runtime.sendMessage(message)) as T | undefined;
+    return res as T;
   }
 
-  function setBusy(value: boolean): void {
-    busy = value;
-    [signInBtn, signUpBtn, signOutBtn, resendBtn, verifiedBtn, deleteAccountBtn, deleteConfirmBtn, deleteCancelBtn].forEach(
-      (b) => {
-        b.disabled = value;
-      },
-    );
-    syncBtn.disabled = value || currentUser?.emailVerified !== true;
-  }
+  // Sign-in and account management live on their own pages now:
+  // signin.html -> (after login) -> dashboard.html
+  accountBtn.addEventListener('click', async () => {
+    const res = await sendMessage<{ ok?: boolean; user?: AuthUser | null }>({ type: 'AUTH_STATE' });
+    const page = res?.ok && res.user ? 'dashboard.html' : 'signin.html';
+    await chrome.tabs.create({ url: chrome.runtime.getURL(`auth/${page}`) });
+  });
 
-  async function sendMessage(message: BackgroundRequest): Promise<RuntimeResponse> {
-    const res = (await chrome.runtime.sendMessage(message)) as RuntimeResponse | undefined;
-    return res || { ok: false, error: 'No response from background' };
-  }
-
-  async function refreshAccount(): Promise<AuthUser | null> {
-    const res = await sendMessage({ type: 'AUTH_STATE' });
+  // Reflect signed-in state in the header button without embedding any auth UI.
+  void sendMessage<{ ok?: boolean; user?: AuthUser | null }>({ type: 'AUTH_STATE' }).then((res) => {
     const user = res?.ok ? res.user ?? null : null;
-    currentUser = user;
-    signedOutView.classList.toggle('hidden', Boolean(user));
-    signedInView.classList.toggle('hidden', !user);
-    configHint.classList.toggle('hidden', !(res?.ok && !res.configured));
-    verifyBanner.classList.toggle('hidden', !user || user.emailVerified === true);
-    syncBtn.disabled = busy || user?.emailVerified !== true;
     if (user) {
-      accountEmail.textContent = user.email || '';
-      accountAvatar.textContent = (user.email || '?').trim().charAt(0).toUpperCase() || '?';
+      accountBtn.textContent = (user.email || '?').trim().charAt(0).toUpperCase() || '?';
+      accountBtn.classList.add('signed-in');
+      accountBtn.title = `${user.email} — open dashboard`;
+    } else {
+      accountBtn.textContent = 'Sign in';
+      accountBtn.title = 'Sign in to sync your history';
     }
-    return user;
-  }
-
-  async function syncNow(showStatus = true): Promise<boolean> {
-    const res = await sendMessage({ type: 'SYNC_HISTORY' });
-    if (res?.ok && showStatus) {
-      const { total = 0, uploaded = 0 } = res.stats || {};
-      setStatus(syncStatus, `Synced · ${total} item${total === 1 ? '' : 's'}${uploaded ? ` · ${uploaded} uploaded` : ''}`, 'success');
-    } else if (!res?.ok && showStatus) {
-      setStatus(syncStatus, res?.error || 'Sync failed', 'error');
-    }
-    if (res?.ok) await loadHistory();
-    return Boolean(res?.ok);
-  }
-
-  async function handleAuth(kind: 'AUTH_SIGN_IN' | 'AUTH_SIGN_UP'): Promise<void> {
-    if (busy) return;
-    const email = authEmail.value.trim();
-    const password = authPassword.value;
-    if (!email || !password) {
-      setStatus(authStatus, 'Enter your email and password.', 'error');
-      return;
-    }
-    if (kind === 'AUTH_SIGN_UP' && password.length < 8) {
-      setStatus(authStatus, 'Password must be at least 8 characters.', 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      setStatus(authStatus, kind === 'AUTH_SIGN_UP' ? 'Creating account…' : 'Signing in…');
-      const res = await sendMessage({ type: kind, email, password });
-      if (!res?.ok) {
-        setStatus(authStatus, res?.error || 'Sign-in failed', 'error');
-        return;
-      }
-      setStatus(authStatus, '');
-      authPassword.value = '';
-      const user = await refreshAccount();
-      if (user && user.emailVerified !== true) {
-        setStatus(
-          syncStatus,
-          kind === 'AUTH_SIGN_UP'
-            ? 'Account created — open the verification email to enable sync.'
-            : 'Verify your email to enable sync.',
-          'warn',
-        );
-      } else {
-        setStatus(syncStatus, 'Merging history…');
-        await syncNow(true);
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  signInBtn.addEventListener('click', () => handleAuth('AUTH_SIGN_IN'));
-  signUpBtn.addEventListener('click', () => handleAuth('AUTH_SIGN_UP'));
-  authPassword.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleAuth('AUTH_SIGN_IN');
-  });
-  syncBtn.addEventListener('click', async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      setStatus(syncStatus, 'Syncing…');
-      await syncNow(true);
-    } finally {
-      setBusy(false);
-    }
-  });
-  signOutBtn.addEventListener('click', async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await sendMessage({ type: 'AUTH_SIGN_OUT' });
-      setStatus(syncStatus, '');
-      await refreshAccount();
-    } finally {
-      setBusy(false);
-    }
-  });
-
-  resendBtn.addEventListener('click', async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const res = await sendMessage({ type: 'AUTH_RESEND_VERIFY' });
-      setStatus(
-        syncStatus,
-        res?.ok ? 'Verification email resent — check your inbox.' : res?.error || 'Could not send the email.',
-        res?.ok ? 'success' : 'error',
-      );
-    } finally {
-      setBusy(false);
-    }
-  });
-
-  verifiedBtn.addEventListener('click', async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      // AUTH_STATE re-checks with Firebase while the session is unverified.
-      const user = await refreshAccount();
-      if (user?.emailVerified) {
-        setStatus(syncStatus, 'Email verified — sync enabled.', 'success');
-        await syncNow(true);
-      } else {
-        setStatus(syncStatus, 'Not verified yet — click the link in your email, then try again.', 'warn');
-      }
-    } finally {
-      setBusy(false);
-    }
-  });
-
-  deleteAccountBtn.addEventListener('click', () => {
-    deleteConfirm.classList.toggle('hidden');
-    setStatus(deleteStatus, '');
-    deletePassword.value = '';
-    if (!deleteConfirm.classList.contains('hidden')) deletePassword.focus();
-  });
-  deleteCancelBtn.addEventListener('click', () => {
-    deleteConfirm.classList.add('hidden');
-    setStatus(deleteStatus, '');
-    deletePassword.value = '';
-  });
-
-  async function doDeleteAccount(): Promise<void> {
-    if (busy || !currentUser) return;
-    const password = deletePassword.value;
-    if (!password) {
-      setStatus(deleteStatus, 'Enter your password to confirm.', 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      setStatus(deleteStatus, 'Deleting account…');
-      const res = await sendMessage({ type: 'AUTH_DELETE', email: currentUser.email, password });
-      if (!res?.ok) {
-        setStatus(deleteStatus, res?.error || 'Delete failed', 'error');
-        return;
-      }
-      deletePassword.value = '';
-      deleteConfirm.classList.add('hidden');
-      setStatus(syncStatus, '');
-      currentUser = null;
-      await refreshAccount();
-      setStatus(authStatus, 'Account and synced history deleted.', 'success');
-    } finally {
-      setBusy(false);
-    }
-  }
-  deleteConfirmBtn.addEventListener('click', doDeleteAccount);
-  deletePassword.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') void doDeleteAccount();
   });
 
   async function loadHistory(): Promise<void> {
-    const res = await chrome.runtime.sendMessage({ type: 'GET_HISTORY' });
-    history = res?.ok ? (res.history as OCRHistoryEntry[]) : [];
+    const res = await sendMessage<{ ok?: boolean; history?: OCRHistoryEntry[] }>({ type: 'GET_HISTORY' });
+    history = res?.ok && res.history ? res.history : [];
     renderHistory();
   }
 
@@ -305,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
       del.textContent = 'Delete';
       del.addEventListener('click', async (ev) => {
         ev.stopPropagation();
-        await chrome.runtime.sendMessage({ type: 'DELETE_ENTRY', id: entry.id });
+        await sendMessage({ type: 'DELETE_ENTRY', id: entry.id });
         history = history.filter((h) => h.id !== entry.id);
         renderHistory();
       });
@@ -328,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
     detailPanel.classList.remove('hidden');
     historyList.style.display = 'none';
     filters.style.display = 'none';
-    accountCard.style.display = 'none';
     headerTitle.textContent = `Result · ${entry.confidence || 0}% · ${entry.language || ''}`;
   }
 
@@ -336,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
     detailPanel.classList.add('hidden');
     historyList.style.display = 'block';
     filters.style.display = 'flex';
-    accountCard.style.display = '';
     headerTitle.textContent = 'OCR History';
     currentDetail = null;
   }
@@ -346,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
   backBtn.addEventListener('click', closeDetail);
   clearHistoryBtn.addEventListener('click', async () => {
     if (!history.length || !confirm('Clear all OCR history?')) return;
-    await chrome.runtime.sendMessage({ type: 'CLEAR_HISTORY' });
+    await sendMessage({ type: 'CLEAR_HISTORY' });
     history = [];
     renderHistory();
   });
@@ -362,7 +167,4 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   loadHistory();
-  refreshAccount().then((user) => {
-    if (user?.emailVerified) syncNow(false).catch(() => {});
-  });
 });

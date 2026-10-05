@@ -17,6 +17,11 @@ body {
   color: white;
 }
 .header h2 { font-size: 16px; }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .header-actions button {
   background: rgba(255,255,255,0.2);
   border: none;
@@ -24,154 +29,26 @@ body {
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
-}
-.hidden { display: none; }
-.account-card {
-  margin: 12px 16px 0;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-.account-title {
-  font-size: 13px;
+  font-size: 12px;
+  font-family: inherit;
   font-weight: 600;
-  margin-bottom: 8px;
 }
-.account-card input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  margin-bottom: 8px;
+.header-actions button:hover {
+  background: rgba(255,255,255,0.32);
 }
-.account-actions {
-  display: flex;
-  gap: 8px;
-}
-.account-actions button {
-  flex: 1;
-  padding: 8px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-}
-.account-actions button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.primary {
-  background: #0078d4;
-  color: #fff;
-}
-.primary:hover:not(:disabled) { background: #005a9e; }
-.secondary {
-  background: #e0e0e0;
-  color: #333;
-}
-.secondary:hover:not(:disabled) { background: #d0d0d0; }
-.auth-status {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 8px;
-}
-.auth-status.error { color: #a4262c; }
-.auth-status.success { color: #2e7d32; }
-.auth-status.warn { color: #8a6d00; }
-.verify-banner {
-  background: #fff8e1;
-  border: 1px solid #e6c95a;
-  border-radius: 6px;
-  padding: 8px 10px;
-  margin-bottom: 8px;
-}
-.verify-text {
-  font-size: 12px;
-  color: #6b5200;
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
-.verify-actions {
-  display: flex;
-  gap: 14px;
-}
-.link-btn {
-  background: none;
-  border: none;
-  color: #0078d4;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-}
-.link-btn:hover:not(:disabled) { color: #005a9e; }
-.link-btn:disabled { opacity: 0.6; cursor: default; }
-.delete-row {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #eee;
-}
-.danger-link {
-  background: none;
-  border: none;
-  color: #a4262c;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-}
-.danger-link:hover { text-decoration: underline; }
-.delete-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-}
-.delete-confirm input { margin-bottom: 0; }
-.danger {
-  background: #a4262c;
-  color: #fff;
-}
-.danger:hover:not(:disabled) { background: #8e1f24; }
-.auth-hint {
-  font-size: 11px;
-  color: #999;
-  margin-top: 8px;
-  line-height: 1.4;
-}
-.auth-hint code {
-  background: #f5f5f5;
-  padding: 1px 3px;
-  border-radius: 3px;
-}
-.account-user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.avatar {
-  width: 26px;
+#account-btn {
+  min-width: 30px;
   height: 26px;
-  border-radius: 50%;
-  background: #0078d4;
-  color: #fff;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
+  border-radius: 999px;
 }
-.account-email {
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+#account-btn.signed-in {
+  background: #ffffff;
+  color: #0078d4;
 }
+.hidden { display: none; }
 .filters {
   padding: 12px 16px;
   border-bottom: 1px solid #e0e0e0;
@@ -243,23 +120,12 @@ body {
   max-height: 60vh;
   overflow-y: auto;
 }
-.detail-panel .primary {
-  margin-bottom: 8px;
-}
-#back-btn {
-  background: #e0e0e0;
-  color: #333;
-  margin-bottom: 12px;
-}
 .icon-btn {
   background: transparent;
   border: none;
   cursor: pointer;
   font-size: 16px;
   padding: 4px;
-}
-#clear-history-btn:hover {
-  background: rgba(255,255,255,0.2) !important;
 }
 .delete-btn {
   background: none;
@@ -281,9 +147,12 @@ body {
   color: #fff;
 }
 #back-btn {
+  background: #e0e0e0;
+  color: #333;
   border: none;
   border-radius: 6px;
   padding: 8px 12px;
   cursor: pointer;
   font-size: 13px;
+  margin-bottom: 12px;
 }

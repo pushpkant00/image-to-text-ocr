@@ -27,7 +27,7 @@ function copyAssets(from: string, to: string): void {
   }
 }
 
-for (const dir of ['background', 'content', 'ocr', 'offscreen', 'popup', 'sidepanel', 'shared']) {
+for (const dir of ['background', 'content', 'ocr', 'offscreen', 'popup', 'sidepanel', 'auth', 'shared']) {
   copyAssets(join(root, 'src', dir), join(dist, dir));
 }
 

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — Image to Text OCR</title>
+  <link rel="stylesheet" href="signin.css">
+</head>
+<body>
+  <main class="auth-shell">
+    <div class="auth-card">
+      <div class="brand">
+        <img src="../icons/icon128.png" alt="" class="brand-icon" width="56" height="56">
+        <h1>Image to Text OCR</h1>
+        <p class="brand-sub">Sign in to sync your history across your devices</p>
+      </div>
+
+      <form id="auth-form" novalidate>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="auth-password" placeholder="Your password" autocomplete="current-password" required>
+        </label>
+        <div id="auth-status" class="auth-status hidden"></div>
+        <button type="submit" id="sign-in-btn" class="btn primary">Sign In</button>
+        <div class="or-divider"><span>or</span></div>
+        <button type="button" id="sign-up-btn" class="btn secondary">Create Account</button>
+      </form>
+
+      <p class="auth-hint">Passwords must be at least 8 characters. New accounts must verify their email to enable sync.</p>
+      <div id="config-hint" class="config-hint hidden">
+        Cloud sync is off — add your Firebase config in <code>src/shared/firebase-config.ts</code>.
+      </div>
+
+      <div class="card-footer">
+        <button type="button" id="close-btn" class="link-btn">Not now — continue without an account</button>
+      </div>
+    </div>
+  </main>
+  <script src="signin.js"></script>
+</body>
+</html>

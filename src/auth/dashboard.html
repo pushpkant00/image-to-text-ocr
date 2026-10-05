@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — Image to Text OCR</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="../icons/icon48.png" alt="" width="26" height="26">
+        <span class="brand-name">Image to Text OCR</span>
+        <span class="brand-tag">Dashboard</span>
+      </div>
+      <div class="user-menu">
+        <span id="avatar" class="avatar">?</span>
+        <span id="user-email" class="user-email"></span>
+        <button id="sign-out-btn" class="btn ghost">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Account &amp; sync</h2>
+        <span id="verify-pill" class="pill warn hidden">Email unverified</span>
+      </div>
+      <div id="verify-banner" class="verify-banner hidden">
+        <div class="verify-text">Verify your email to enable sync — we sent a link to your inbox.</div>
+        <div class="verify-actions">
+          <button id="resend-btn" class="link-btn">Resend email</button>
+          <button id="verified-btn" class="link-btn">I've verified</button>
+        </div>
+      </div>
+      <div class="sync-row">
+        <div class="sync-info">
+          <div id="sync-status" class="auth-status hidden"></div>
+          <p class="sync-note">History lives on this device. Sync merges it with your other devices — text is end-to-end encrypted, so only you can read it.</p>
+        </div>
+        <button id="sync-btn" class="btn primary auto">Sync Now</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>History</h2>
+        <span id="stats" class="stats"></span>
+      </div>
+      <div class="filters">
+        <input type="text" id="search-input" placeholder="Search text…">
+        <select id="filter-language">
+          <option value="all">All Languages</option>
+          <option value="eng">English</option>
+          <option value="hin">Hindi</option>
+          <option value="spa">Spanish</option>
+          <option value="fra">French</option>
+          <option value="deu">German</option>
+          <option value="jpn">Japanese</option>
+          <option value="chi_sim">Chinese (Simplified)</option>
+        </select>
+        <button id="clear-history-btn" class="btn ghost danger-text">Clear all</button>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </section>
+
+    <section class="panel danger-zone">
+      <div class="panel-head"><h2>Danger zone</h2></div>
+      <div class="danger-row">
+        <div>
+          <div class="danger-title">Delete your account</div>
+          <p class="danger-note">Deletes your account, your synced history, and this device's history. Enter your password to confirm.</p>
+        </div>
+        <button id="delete-account-btn" class="btn danger-outline auto">Delete account…</button>
+      </div>
+      <div id="delete-confirm" class="delete-confirm hidden">
+        <input type="password" id="delete-password" placeholder="Confirm with your password" autocomplete="current-password">
+        <div id="delete-status" class="auth-status hidden"></div>
+        <div class="confirm-actions">
+          <button id="delete-confirm-btn" class="btn danger auto">Delete everything</button>
+          <button id="delete-cancel-btn" class="btn secondary auto">Cancel</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="detail-modal" class="modal hidden">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <span id="detail-meta" class="modal-meta"></span>
+        <button id="modal-close" class="icon-btn" title="Close">×</button>
+      </div>
+      <div id="detail-text" class="modal-text"></div>
+      <div class="modal-actions">
+        <button id="copy-detail-btn" class="btn primary auto">Copy Text</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
