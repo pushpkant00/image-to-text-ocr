@@ -253,6 +253,9 @@ async function sendVerificationEmail(idToken: string): Promise<void> {
   });
 }
 
+/** Local key recording which account last owned this device's history. */
+const LAST_ACCOUNT_KEY = 'lastAccountUid';
+
 export async function signIn(email: string, password: string): Promise<AuthUser> {
   requireConfigured();
   await assertNotLocked();
@@ -267,6 +270,12 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
   }
   await clearFailures();
   const user = await persistAuth(data, email);
+  // Account switch on this device → the previous account's history must not
+  // show (or sync) under the new account. Same account / first sign-in keeps
+  // the device history so a re-login can merge it back with the cloud copy.
+  const { lastAccountUid = null } = await chrome.storage.local.get<LocalStorage>(LAST_ACCOUNT_KEY);
+  if (lastAccountUid && lastAccountUid !== user.uid) await chrome.storage.local.set({ history: [] });
+  await chrome.storage.local.set({ [LAST_ACCOUNT_KEY]: user.uid });
   await ensureSyncKey(password); // throw → sign-in reports the setup failure
   return user;
 }
@@ -278,6 +287,9 @@ export async function signUp(email: string, password: string): Promise<AuthUser>
     body: { email, password, returnSecureToken: true },
   });
   const user = await persistAuth(data, email);
+  // A brand-new account always starts with a clean device history so it never
+  // inherits another account's OCR results.
+  await chrome.storage.local.set({ history: [], [LAST_ACCOUNT_KEY]: user.uid });
   // Best-effort: the resend button is available if this fails.
   if (data.idToken) await sendVerificationEmail(data.idToken).catch(() => {});
   await ensureSyncKey(password);
@@ -317,7 +329,7 @@ export async function deleteAccount(email: string, password: string): Promise<vo
   await clearCloudHistory().catch(() => {});
   await request(identityUrl('accounts:delete'), { body: { idToken } });
   await clearSession();
-  await chrome.storage.local.remove(['history', 'syncKeys']);
+  await chrome.storage.local.remove(['history', 'syncKeys', LAST_ACCOUNT_KEY]);
 }
 
 export async function signOut(): Promise<void> {
@@ -325,10 +337,13 @@ export async function signOut(): Promise<void> {
   await clearSession();
   // Drop this device's cached sync key — it is re-derived from the password
   // on the next sign-in, so a signed-out profile cannot decrypt cloud data.
+  // Remember which account this device belonged to so the next account that
+  // signs in can be detected as a switch (history is wiped) vs the same
+  // account re-logging in (history is kept and re-merged on sync).
   if (auth) {
     const { syncKeys = {} } = await chrome.storage.local.get<LocalStorage>({ syncKeys: {} });
     delete syncKeys[auth.uid];
-    await chrome.storage.local.set({ syncKeys });
+    await chrome.storage.local.set({ syncKeys, [LAST_ACCOUNT_KEY]: auth.uid });
   }
 }
 

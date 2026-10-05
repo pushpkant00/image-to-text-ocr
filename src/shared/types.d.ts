@@ -56,6 +56,8 @@ interface LocalStorage {
   auth?: AuthSession | null;
   /** Raw sync-encryption keys, keyed by account uid (see background/crypto.ts). */
   syncKeys?: Record<string, string>;
+  /** uid of the last account used on this device — device history is isolated per account. */
+  lastAccountUid?: string | null;
 }
 
 interface SyncStorage extends OCRSettings {}
