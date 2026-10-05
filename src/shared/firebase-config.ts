@@ -9,9 +9,9 @@ export interface FirebaseConfig {
 }
 
 export const FIREBASE_CONFIG: FirebaseConfig = {
-  apiKey: '', // e.g. "AIzaSy..."
-  authDomain: '', // e.g. "my-app.firebaseapp.com"
-  projectId: '', // e.g. "my-app"
+  apiKey: 'AIzaSyAKO2433a1I7OHTCZaFtZLQkYAco3Ix4hE',
+  authDomain: 'extension-a6144.firebaseapp.com',
+  projectId: 'extension-a6144',
 };
 
 export function isFirebaseConfigured(): boolean {
