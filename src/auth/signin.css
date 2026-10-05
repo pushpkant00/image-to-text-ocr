@@ -186,6 +186,15 @@ body {
 .btn:disabled { opacity: 0.6; cursor: default; }
 .btn.primary { background: var(--brand); color: #fff; }
 .btn.primary:hover:not(:disabled) { background: var(--brand-dark); }
+/* Secondary (skip) action: outlined band so it stays obvious next to the
+   filled primary button without competing with it. */
+.btn.secondary {
+  background: #fff;
+  color: var(--brand-dark);
+  border: 1px solid var(--brand);
+}
+.btn.secondary:hover:not(:disabled) { background: #eef5fb; border-color: var(--brand-dark); }
+.btn.secondary:active:not(:disabled) { background: #e3eefa; }
 
 :where(button, a, input):focus-visible {
   outline: 2px solid var(--brand);
