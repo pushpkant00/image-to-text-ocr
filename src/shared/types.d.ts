@@ -74,6 +74,7 @@ type BackgroundRequest =
   | { type: 'AUTH_SIGN_UP'; email: string; password: string }
   | { type: 'AUTH_SIGN_OUT' }
   | { type: 'AUTH_RESEND_VERIFY' }
+  | { type: 'AUTH_RESET_PASSWORD'; email: string }
   | { type: 'AUTH_DELETE'; email: string; password: string }
   | { type: 'SYNC_HISTORY' }
   | { type: 'OCR_RUN'; payload: OcrRunPayload };

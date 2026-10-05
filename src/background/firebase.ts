@@ -59,6 +59,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   API_KEY_INVALID: 'Firebase is not configured correctly (bad API key).',
   EMAIL_EXISTS: 'An account with this email already exists.',
   EMAIL_NOT_FOUND: 'No account found with this email.',
+  USER_NOT_FOUND: 'No account found with this email.',
   INVALID_EMAIL: 'Enter a valid email address.',
   INVALID_PASSWORD: 'Incorrect email or password.',
   INVALID_LOGIN_CREDENTIALS: 'Incorrect email or password.',
@@ -287,6 +288,13 @@ export async function resendVerification(): Promise<void> {
   requireConfigured();
   const idToken = await getIdToken();
   await sendVerificationEmail(idToken);
+}
+
+export async function sendPasswordReset(email: string): Promise<void> {
+  requireConfigured();
+  await request(identityUrl('accounts:sendOobCode'), {
+    body: { requestType: 'PASSWORD_RESET', email },
+  });
 }
 
 export async function deleteAccount(email: string, password: string): Promise<void> {

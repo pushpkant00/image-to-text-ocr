@@ -5,6 +5,7 @@ import {
   signUp,
   signOut,
   resendVerification,
+  sendPasswordReset,
   deleteAccount,
   pushEntry,
   removeEntryFromCloud,
@@ -321,6 +322,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         break;
       case 'AUTH_RESEND_VERIFY':
         await resendVerification();
+        sendResponse({ ok: true });
+        break;
+      case 'AUTH_RESET_PASSWORD':
+        await sendPasswordReset(msg.email);
         sendResponse({ ok: true });
         break;
       case 'AUTH_DELETE':

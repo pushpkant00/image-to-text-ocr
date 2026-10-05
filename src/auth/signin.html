@@ -10,27 +10,46 @@
   <main class="auth-shell">
     <div class="auth-card">
       <div class="brand">
-        <img src="../icons/icon128.png" alt="" class="brand-icon" width="56" height="56">
+        <img src="../icons/icon128.png" alt="" class="brand-icon" width="52" height="52">
         <h1>Image to Text OCR</h1>
         <p class="brand-sub" id="brand-sub">Sign in to sync your history across your devices</p>
       </div>
 
+      <div class="mode-tabs" role="tablist" aria-label="Sign in or create account">
+        <button type="button" id="sign-in-tab" class="mode-tab active" role="tab" aria-selected="true">Sign in</button>
+        <button type="button" id="sign-up-tab" class="mode-tab" role="tab" aria-selected="false">Create account</button>
+      </div>
+
       <form id="auth-form" novalidate>
-        <label class="field">
-          <span>Email</span>
-          <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" required>
-        </label>
-        <label class="field">
-          <span>Password</span>
-          <input type="password" id="auth-password" placeholder="Your password" autocomplete="current-password" required>
-        </label>
-        <div id="auth-status" class="auth-status hidden"></div>
+        <div id="error-summary" class="error-summary hidden" role="alert" tabindex="-1"></div>
+
+        <div class="field">
+          <label for="auth-email">Email</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" aria-describedby="email-error" required>
+          <p class="field-error hidden" id="email-error" role="alert"></p>
+        </div>
+
+        <div class="field">
+          <label for="auth-password">Password</label>
+          <div class="password-wrap">
+            <input type="password" id="auth-password" placeholder="Your password" autocomplete="current-password" aria-describedby="password-error" required>
+            <button type="button" id="toggle-password" class="pw-toggle" aria-label="Show password" aria-pressed="false" title="Show password">
+              <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.6 10.6 0 0 1 12 20c-6.5 0-10-7-10-7a18.5 18.5 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a18.4 18.4 0 0 1-2.16 3.19"/><path d="m1 1 22 22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+          </div>
+          <div class="field-foot">
+            <p class="field-error hidden" id="password-error" role="alert"></p>
+            <button type="button" id="forgot-btn" class="link-btn small">Forgot password?</button>
+          </div>
+        </div>
+
+        <div id="auth-status" class="auth-status hidden" role="alert"></div>
+
         <button type="submit" id="sign-in-btn" class="btn primary">Sign In</button>
-        <div class="or-divider"><span>or</span></div>
-        <button type="button" id="sign-up-btn" class="btn secondary">Create Account</button>
       </form>
 
-      <p class="auth-hint">Passwords must be at least 8 characters. New accounts must verify their email to enable sync.</p>
+      <p class="auth-hint" id="auth-hint">Passwords must be at least 8 characters. New accounts must verify their email to enable sync.</p>
       <div id="config-hint" class="config-hint hidden">
         Cloud sync is off — add your Firebase config in <code>src/shared/firebase-config.ts</code>.
       </div>

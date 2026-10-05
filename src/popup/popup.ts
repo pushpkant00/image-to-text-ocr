@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const lastAccuracy = q<HTMLElement>('last-accuracy');
   const copyLastBtn = q<HTMLButtonElement>('copy-last-btn');
   const viewHistoryBtn = q<HTMLButtonElement>('view-history-btn');
+  const accountBtn = q<HTMLButtonElement>('account-btn');
+  const accountLabel = q<HTMLElement>('account-label');
   const statusEl = q<HTMLElement>('ocr-status');
 
   function setStatus(msg: string, busy = true): void {
@@ -116,6 +118,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.close();
   });
 
+  // --- account entry (direct sign-in from the popup, like other extensions) ---
+  let accountPage = 'auth/signin.html';
+  async function loadAuthState(): Promise<void> {
+    try {
+      const res = await chrome.runtime.sendMessage({ type: 'AUTH_STATE' });
+      if (res?.ok && res.user) {
+        accountPage = 'auth/dashboard.html';
+        accountLabel.textContent = 'Account';
+        accountBtn.title = 'Account';
+        accountBtn.classList.add('signed-in');
+      }
+    } catch {
+      /* stay in signed-out state */
+    }
+  }
+  accountBtn.addEventListener('click', async () => {
+    await chrome.tabs.create({ url: chrome.runtime.getURL(accountPage) });
+    window.close();
+  });
+
   async function loadLastResult(): Promise<void> {
     const res = await chrome.runtime.sendMessage({ type: 'GET_HISTORY' });
     const history: OCRHistoryEntry[] = res?.ok && Array.isArray(res.history) ? res.history : [];
@@ -124,4 +146,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadSettings();
   await loadLastResult();
+  await loadAuthState();
 });

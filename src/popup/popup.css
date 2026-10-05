@@ -20,17 +20,48 @@ h1 {
   font-weight: 600;
   color: #0078d4;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  color: #0078d4;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 999px;
+  transition: background 0.15s;
+}
+.account-btn:hover { background: #eaf3fc; }
+.account-btn.signed-in { background: #0078d4; color: #fff; }
+.account-btn.signed-in:hover { background: #005a9e; }
+.account-btn svg { width: 13px; height: 13px; flex: none; }
 .link-btn {
   background: none;
   border: none;
   color: #0078d4;
   font-size: 12px;
   font-weight: 500;
+  font-family: inherit;
   padding: 4px 6px;
   cursor: pointer;
   border-radius: 4px;
+  transition: background 0.15s;
 }
 .link-btn:hover { background: #eaf3fc; }
+
+:where(button, a, select, input, label):focus-visible {
+  outline: 2px solid #0078d4;
+  outline-offset: 1px;
+}
 
 button,
 .file-btn {
@@ -57,7 +88,7 @@ button.primary:hover { background: #005a9e; }
 .hint {
   font-size: 11px;
   line-height: 1.45;
-  color: #777;
+  color: #6b6b6b;
   text-align: center;
   margin: 6px 0 10px;
 }
@@ -152,6 +183,10 @@ button.primary:hover { background: #005a9e; }
 .shortcut {
   text-align: center;
   font-size: 10.5px;
-  color: #999;
+  color: #6b6b6b;
   margin-top: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }
