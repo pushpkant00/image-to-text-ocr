@@ -14,7 +14,7 @@
 body {
   min-height: 100vh;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: var(--bg);
+  background: radial-gradient(1000px 560px at 50% -10%, #e8f1fc 0%, var(--bg) 65%) no-repeat, var(--bg);
   color: var(--text);
   display: flex;
   align-items: center;
@@ -23,51 +23,92 @@ body {
 }
 
 .auth-card {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   max-width: 400px;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0, 40, 90, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 40, 90, 0.1), 0 2px 6px rgba(0, 40, 90, 0.05);
   padding: 34px 30px 22px;
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand) 0%, #4aa3ea 100%);
 }
 
 /* ---------- brand ---------- */
 .brand { text-align: center; margin-bottom: 22px; }
-.brand-icon { display: block; margin: 0 auto 12px; border-radius: 12px; }
+.brand-icon {
+  display: block;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  padding: 9px;
+  background: radial-gradient(circle at 30% 25%, #f2f8ff, #e3eefb);
+  border: 1px solid #d7e7f9;
+  box-shadow: 0 3px 10px rgba(0, 120, 212, 0.16);
+}
 .brand h1 { font-size: 21px; font-weight: 650; letter-spacing: -0.2px; }
 .brand-sub { font-size: 13.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
 
 /* ---------- segmented mode tabs ---------- */
 .mode-tabs {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 0;
   background: #eef1f5;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 11px;
   padding: 4px;
   margin-bottom: 18px;
 }
+/* Sliding thumb: pure decoration keyed off aria-selected, so the selected
+   state is always correct even if motion is disabled or interrupted. */
+.mode-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 2);
+  background: #fff;
+  border: 1px solid rgba(0, 40, 90, 0.07);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 40, 90, 0.14);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.mode-tabs:has(#sign-up-tab[aria-selected='true']) .mode-thumb { transform: translateX(100%); }
 .mode-tab {
-  padding: 8px 10px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 8px;
   border: none;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  transition: color 0.15s, opacity 0.15s;
 }
 .mode-tab:hover { color: var(--text); }
-.mode-tab.active {
-  background: #fff;
-  color: var(--brand);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
+.mode-tab:active:not(:disabled) { opacity: 0.75; }
+.mode-tab.active,
+.mode-tab[aria-selected='true'] { color: var(--brand-dark); background: transparent; box-shadow: none; }
 .mode-tab:disabled { opacity: 0.6; cursor: default; }
+.tab-icon { width: 15px; height: 15px; flex: none; }
 
 /* ---------- form ---------- */
 .field { margin-bottom: 14px; }
@@ -184,8 +225,13 @@ body {
   transition: background 0.15s, opacity 0.15s;
 }
 .btn:disabled { opacity: 0.6; cursor: default; }
-.btn.primary { background: var(--brand); color: #fff; }
-.btn.primary:hover:not(:disabled) { background: var(--brand-dark); }
+.btn.primary {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.32);
+}
+.btn.primary:hover:not(:disabled) { background: var(--brand-dark); box-shadow: 0 3px 10px rgba(0, 120, 212, 0.38); }
+.btn.primary:active:not(:disabled) { box-shadow: 0 1px 4px rgba(0, 120, 212, 0.3); }
 /* Secondary (skip) action: outlined band so it stays obvious next to the
    filled primary button without competing with it. */
 .btn.secondary {
@@ -193,7 +239,7 @@ body {
   color: var(--brand-dark);
   border: 1px solid var(--brand);
 }
-.btn.secondary:hover:not(:disabled) { background: #eef5fb; border-color: var(--brand-dark); }
+.btn.secondary:hover:not(:disabled) { background: #eef5fb; border-color: var(--brand-dark); box-shadow: 0 2px 6px rgba(0, 40, 90, 0.08); }
 .btn.secondary:active:not(:disabled) { background: #e3eefa; }
 
 :where(button, a, input):focus-visible {
