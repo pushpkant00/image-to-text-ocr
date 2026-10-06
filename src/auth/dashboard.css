@@ -25,9 +25,10 @@ body {
 
 /* ---------- top bar ---------- */
 .topbar {
-  background: var(--brand);
-  color: #fff;
-  box-shadow: 0 2px 10px rgba(0, 40, 90, 0.18);
+  background: #fff;
+  color: var(--text);
+  border-bottom: 1px solid #e9eef5;
+  box-shadow: 0 1px 2px rgba(16, 40, 72, 0.04);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -42,30 +43,31 @@ body {
   gap: 16px;
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.brand-name { font-size: 15px; font-weight: 650; }
+.brand-name { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
 .brand-tag {
   font-size: 11px;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.22);
+  font-weight: 650;
+  background: var(--brand-tint);
+  color: var(--brand-dark);
   border-radius: 999px;
   padding: 3px 9px;
 }
 .topnav { display: flex; align-items: center; gap: 4px; justify-self: center; }
 .topnav-link {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--muted);
   font-size: 13px;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 7px 13px;
   border-radius: 8px;
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
-.topnav-link:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
-.topnav-link.active { background: rgba(255, 255, 255, 0.22); color: #fff; }
+.topnav-link:hover { background: #eef3f9; color: var(--text); }
+.topnav-link.active { background: var(--brand-tint); color: var(--brand-dark); }
 .user-menu { display: flex; align-items: center; gap: 10px; min-width: 0; justify-self: end; }
 .user-email {
   font-size: 13px;
-  opacity: 0.95;
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -75,8 +77,8 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #fff;
-  color: var(--brand);
+  background: var(--brand);
+  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -106,15 +108,15 @@ body {
 .icon-btn:focus-visible,
 .delete-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .topbar .btn:focus-visible,
-.topnav-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.topnav-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .btn.secondary { background: #e4e4e4; color: var(--text); }
 .btn.secondary:hover:not(:disabled) { background: #d8d8d8; }
 .btn.ghost {
   background: transparent;
-  color: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #3a4654;
+  border: 1px solid #d5dde7;
 }
-.btn.ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+.btn.ghost:hover:not(:disabled) { background: #f0f4f9; }
 .panel .btn.ghost { color: var(--brand); border-color: #b9d7f1; }
 .panel .btn.ghost:hover:not(:disabled) { background: #eef6fd; }
 .btn.danger { background: var(--danger); color: #fff; }
