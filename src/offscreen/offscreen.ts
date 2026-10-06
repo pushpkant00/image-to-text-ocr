@@ -1,7 +1,12 @@
-// Offscreen document: has DOM + canvas, hosts Tesseract.js.
+// Offscreen document: has DOM + canvas, hosts Tesseract.js and pdf.js.
 // Listens for { type: 'OCR_RUN', payload: { imageData, area?, language?, dpr? } }
-// Crops to the selected area (scaling CSS px -> screenshot px), runs OCR, responds.
-// NOTE: no `import` here — offscreen.html loads this as a classic script.
+// and { type: 'PDF_RUN', payload: { pdfData, language? } }.
+// Crops to the selected area, runs OCR, responds. PDFs get text-layer
+// extraction with per-page OCR fallback for scanned pages.
+// Loaded as a module (offscreen.html) so it can import shared helpers;
+// Tesseract/pdfjs remain globals from the classic scripts loaded before it.
+
+import { itemsToText } from '../convert/pdf-text.js';
 
 (() => {
   const workerPromiseByLang: Record<string, Promise<OcrWorker>> = {};
@@ -37,10 +42,14 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    grayscale(ctx, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  }
 
-    // Light preprocessing: grayscale + contrast stretch helps Tesseract
+  // Light preprocessing: grayscale + contrast stretch helps Tesseract
+  function grayscale(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     try {
-      const id = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const id = ctx.getImageData(0, 0, width, height);
       const d = id.data;
       for (let i = 0; i < d.length; i += 4) {
         const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
@@ -48,9 +57,8 @@
       }
       ctx.putImageData(id, 0, 0);
     } catch {
-      /* canvas taint shouldn't happen for screenshots, ignore */
+      /* canvas taint shouldn't happen for extension pages, ignore */
     }
-    return canvas.toDataURL('image/png');
   }
 
   // Only English ships in the package; other languages are fetched from the
@@ -101,6 +109,63 @@
     error?: string;
   }
 
+  // ---------- PDF -> text (pdf.js text layer, OCR fallback for scans) ----------
+  // Payload/response types come from the shared ambient types (shared/types.d.ts).
+
+  async function ocrPdfPage(page: PdfjsPage, language?: string): Promise<string> {
+    const base = page.getViewport({ scale: 1 });
+    // Aim for ~1600px wide so Tesseract gets enough pixels, capped at 3x.
+    const scale = Math.min(3, Math.max(2, 1600 / base.width));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    grayscale(ctx, canvas.width, canvas.height);
+    const worker = await getWorker(language);
+    const { data } = await worker.recognize(canvas.toDataURL('image/png'));
+    return (data?.text || '').trim();
+  }
+
+  async function extractPdfText({ pdfData, language }: PdfRunPayload): Promise<PdfExtractResponse> {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('libs/pdfjs/pdf.worker.min.js');
+    const doc = await pdfjsLib.getDocument({ data: pdfData }).promise;
+    const total = doc.numPages;
+    const parts: string[] = [];
+    let ocrPages = 0;
+    try {
+      for (let p = 1; p <= total; p++) {
+        const page = await doc.getPage(p);
+        let text = '';
+        try {
+          text = itemsToText((await page.getTextContent()).items).trim();
+        } catch (err) {
+          console.warn('[pdf] getTextContent failed on page', p, err);
+        }
+        // Fewer than 10 non-space chars -> treat the page as a scan and OCR it.
+        let didOcr = false;
+        if (text.replace(/\s/g, '').length < 10) {
+          try {
+            text = await ocrPdfPage(page, language);
+            didOcr = true;
+            ocrPages++;
+          } catch (err) {
+            console.warn('[pdf] page OCR failed on page', p, err);
+          }
+        }
+        parts.push(text);
+        chrome.runtime
+          .sendMessage({ type: 'CONVERT_PROGRESS', page: p, total, ocr: didOcr })
+          .catch(() => {});
+      }
+    } finally {
+      await doc.destroy().catch(() => {});
+    }
+    return { text: parts.join('\n\n'), pages: total, ocrPages };
+  }
+
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const msg = message as { type?: string; payload?: OcrRunPayload } | undefined;
     if (msg?.type !== 'OCR_RUN') return false;
@@ -116,6 +181,22 @@
         sendResponse(response);
       } catch (err) {
         console.error('[ocr] offscreen failed:', err);
+        sendResponse({ error: err instanceof Error ? err.message : String(err) });
+      }
+    })();
+    return true;
+  });
+
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    const msg = message as { type?: string; payload?: PdfRunPayload } | undefined;
+    if (msg?.type !== 'PDF_RUN') return false;
+    (async () => {
+      try {
+        const payload = msg.payload;
+        if (!payload?.pdfData) throw new Error('No PDF data');
+        sendResponse(await extractPdfText(payload));
+      } catch (err) {
+        console.error('[pdf] offscreen failed:', err);
         sendResponse({ error: err instanceof Error ? err.message : String(err) });
       }
     })();

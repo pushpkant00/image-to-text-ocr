@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings — Image to Text OCR</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="../icons/icon48.png" alt="" width="26" height="26">
+        <span class="brand-name">Image to Text OCR</span>
+        <span class="brand-tag">Settings</span>
+      </div>
+      <nav class="topnav" aria-label="Dashboard menu">
+        <a href="dashboard.html" class="topnav-link">Account</a>
+        <a href="settings.html" class="topnav-link active" aria-current="page">Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="dash">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>OCR</h2>
+        <span class="save-status hidden" role="status" aria-live="polite"></span>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label class="setting-label" for="language-select">Language</label>
+          <p class="setting-desc">Used for images, selections, and scanned PDFs.</p>
+        </div>
+        <select id="language-select" class="setting-control">
+          <option value="eng" selected>English (offline)</option>
+          <option value="hin">Hindi</option>
+          <option value="spa">Spanish</option>
+          <option value="fra">French</option>
+          <option value="deu">German</option>
+          <option value="jpn">Japanese</option>
+          <option value="chi_sim">Chinese (Simplified)</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label class="setting-label" for="remove-breaks">Clean up line breaks</label>
+          <p class="setting-desc">Join words that were split across lines.</p>
+        </div>
+        <input type="checkbox" id="remove-breaks" class="switch" checked>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label class="setting-label" for="merge-spaces">Merge extra spaces</label>
+          <p class="setting-desc">Squeeze runs of spaces down to one.</p>
+        </div>
+        <input type="checkbox" id="merge-spaces" class="switch" checked>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Behavior</h2>
+        <span class="save-status hidden" role="status" aria-live="polite"></span>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label class="setting-label" for="show-result-card">Show result card on the page</label>
+          <p class="setting-desc">Show a small card with the text right on the page after extracting.</p>
+        </div>
+        <input type="checkbox" id="show-result-card" class="switch" checked>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label class="setting-label" for="open-history">Open history panel after extracting</label>
+          <p class="setting-desc">Open the side panel with your history when extraction finishes.</p>
+        </div>
+        <input type="checkbox" id="open-history" class="switch" checked>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label class="setting-label" for="auto-download">Download conversions automatically</label>
+          <p class="setting-desc">Save converted files right away instead of clicking Download.</p>
+        </div>
+        <input type="checkbox" id="auto-download" class="switch">
+      </div>
+    </section>
+  </main>
+
+  <script src="settings.js"></script>
+</body>
+</html>

@@ -14,7 +14,14 @@ import {
 } from './firebase.js';
 import { isFirebaseConfigured } from '../shared/firebase-config.js';
 
-const DEFAULT_SETTINGS: OCRSettings = { language: 'eng', removeLineBreaks: true, mergeSpaces: true };
+const DEFAULT_SETTINGS: OCRSettings = {
+  language: 'eng',
+  removeLineBreaks: true,
+  mergeSpaces: true,
+  showResultCard: true,
+  openHistoryAfterOcr: true,
+  autoDownload: false,
+};
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -69,16 +76,15 @@ async function ensureOffscreen(): Promise<void> {
   await creatingOffscreen;
 }
 
-// Ask the offscreen document to OCR an image (it has DOM + canvas + workers).
+// Ask the offscreen document to run a job (it has DOM + canvas + workers).
 // Retries while the document is still loading its scripts; resets it if wedged.
-async function ocrViaOffscreen({ imageData, area, language, dpr }: OcrRunPayload): Promise<RawOcrResult> {
-  const payload: OcrRunPayload = { imageData, area, language, dpr };
+async function sendViaOffscreen<T>(type: string, payload: unknown): Promise<T> {
   const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 4; attempt++) {
     await ensureOffscreen();
     try {
-      return await chrome.runtime.sendMessage({ type: 'OCR_RUN', payload });
+      return await chrome.runtime.sendMessage({ type, payload });
     } catch (e) {
       lastError = e;
       await sleep(attempt === 0 ? 500 : 1500);
@@ -88,10 +94,14 @@ async function ocrViaOffscreen({ imageData, area, language, dpr }: OcrRunPayload
   try {
     await chrome.offscreen.closeDocument().catch(() => {});
     await ensureOffscreen();
-    return await chrome.runtime.sendMessage({ type: 'OCR_RUN', payload });
+    return await chrome.runtime.sendMessage({ type, payload });
   } catch (e) {
     throw lastError || e;
   }
+}
+
+async function ocrViaOffscreen(payload: OcrRunPayload): Promise<RawOcrResult> {
+  return sendViaOffscreen<RawOcrResult>('OCR_RUN', payload);
 }
 
 async function fetchAsDataUrl(url: string): Promise<string> {
@@ -183,8 +193,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (raw?.error) throw new Error(raw.error);
     const entry = await processResult(raw, settings);
     // send text back to the tab so the content script can show the result card
-    if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'OCR_DONE', entry }).catch(() => {});
-    if (tab?.windowId) openSidePanel(tab.windowId);
+    if (tab?.id && settings.showResultCard) {
+      chrome.tabs.sendMessage(tab.id, { type: 'OCR_DONE', entry }).catch(() => {});
+    }
+    if (tab?.windowId && settings.openHistoryAfterOcr) openSidePanel(tab.windowId);
   } catch (err) {
     console.error('[ocr] right-click failed:', err);
     if (tab?.id)
@@ -264,9 +276,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           language: msg.language,
         });
         sendResponse({ ok: true, entry });
-        if (tab?.windowId) openSidePanel(tab.windowId);
+        const settings = await getSettings();
+        if (tab?.windowId && settings.openHistoryAfterOcr) openSidePanel(tab.windowId);
         // tell the originating tab so it can show the result card
-        if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: 'OCR_DONE', entry }).catch(() => {});
+        if (tab?.id && settings.showResultCard) {
+          chrome.tabs.sendMessage(tab.id, { type: 'OCR_DONE', entry }).catch(() => {});
+        }
         break;
       }
       case 'OCR_IMAGE_DATA': {
@@ -334,6 +349,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         break;
       case 'SYNC_HISTORY':
         sendResponse({ ok: true, stats: await syncHistory() });
+        break;
+      case 'PDF_EXTRACT': {
+        // from popup: { pdfData, language? } — offscreen does the work
+        const res = await sendViaOffscreen<PdfExtractResponse | undefined>('PDF_RUN', {
+          pdfData: msg.pdfData,
+          language: msg.language,
+        });
+        if (!res) throw new Error('No response from the PDF engine');
+        if (res.error) throw new Error(res.error);
+        const text = res.text || '';
+        // Persist so a closed popup can restore the result on reopen.
+        await chrome.storage.local.set({
+          lastConvert: {
+            text,
+            pages: res.pages || 0,
+            ts: Date.now(),
+            mode: msg.mode,
+            name: msg.name,
+          } satisfies LastConvert,
+        });
+        sendResponse({ ok: true, text, pages: res.pages || 0, ocrPages: res.ocrPages || 0 });
+        break;
+      }
+      case 'GET_LAST_CONVERT': {
+        const { lastConvert = null } = await chrome.storage.local.get<LocalStorage>({ lastConvert: null });
+        await chrome.storage.local.set({ lastConvert: null });
+        sendResponse({ ok: true, lastConvert });
+        break;
+      }
+      case 'CONVERT_PROGRESS':
+        // progress broadcast from offscreen — the popup listens for it
+        sendResponse({ ok: true });
         break;
       case 'OCR_RUN':
         // offscreen's own request; it listens for this message — we don't handle it

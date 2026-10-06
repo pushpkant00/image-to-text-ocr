@@ -47,6 +47,18 @@ body {
   border-radius: 999px;
   padding: 3px 9px;
 }
+.topnav { display: flex; align-items: center; gap: 4px; }
+.topnav-link {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.topnav-link:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.topnav-link.active { background: rgba(255, 255, 255, 0.22); color: #fff; }
 .user-menu { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .user-email {
   font-size: 13px;

@@ -9,6 +9,7 @@ Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, 
 - **Drag-to-select OCR** — press `Ctrl+Shift+X` (or `⌘+Shift+X` on Mac), draw a box over anything: images, video frames, PDFs in the browser, charts, memes
 - **Right-click any image** → *Extract text from this image*
 - **Popup tools** — OCR an image file or paste a screenshot straight from the clipboard (`Ctrl+V`)
+- **File converters** — a **Convert** tab in the popup with five offline conversions: *Jpg To Word* (OCR → `.docx`), *Pdf To Text* / *Pdf To Word* (pdf.js text layer, with automatic per-page OCR for scanned pages), *Text To PDF* / *Text To Word* — no uploads, no network
 - **Result card** — compact top-right card with **Preview** and **Copy** buttons (text is copied only when you click Copy)
 - **Side-panel history** — searchable, per-language filter, confidence scores, delete/clear
 - **100% offline English OCR** — Tesseract.js + language data bundled, nothing ever leaves your machine
@@ -31,7 +32,7 @@ Requirements: [Node.js](https://nodejs.org/) 23.6+ (build scripts are TypeScript
 git clone https://github.com/pushpkant00/image-to-text-ocr.git
 cd image-to-text-ocr
 npm install     # dependencies
-npm run setup   # bundles the offline OCR engine + English model (~15 MB into libs/)
+npm run setup   # bundles the offline OCR engine + English model + pdf.js (~16 MB into libs/)
 npm run build   # compiles TypeScript (tsc) + assembles the extension into dist/
 ```
 
@@ -46,8 +47,9 @@ Then **Load unpacked** → `dist/` (see above).
 | Select area | `Ctrl+Shift+X`, drag a box, release |
 | Image on a page | Right-click → *Extract text from this image* |
 | File / screenshot | Extension icon → *Upload Image File* or paste with `Ctrl+V` |
+| Conversions | Extension icon → **Convert** tab → pick one of the five modes (Jpg→Word, Pdf→Text, Pdf→Word, Text→PDF, Text→Word) |
 | History | Extension icon → *Open History Panel* |
-| Settings | Language, line-break/space cleanup (in the popup, synced across devices) |
+| Settings | Gear icon in the popup, or Dashboard → **Settings**: language, cleanup, result-card/panel behavior, auto-download (synced across devices) |
 
 Works on normal websites. It **cannot** run on `chrome://` pages, the new-tab page, or the Chrome Web Store (Chrome blocks all extensions there) — you'll get a notification explaining why.
 
@@ -87,10 +89,11 @@ selection overlay (content script: drag box, toasts, result card)
 service worker (coordinator: captureVisibleTab, history, cloud sync)
         │  full-tab screenshot + crop rect
         ▼
-offscreen document (DOM + canvas: crops, grayscales, runs Tesseract.js)
+offscreen document (DOM + canvas: crops, grayscales, runs Tesseract.js,
+                    extracts PDF text via pdf.js, OCRs scanned pages)
         │  extracted text
         ▼
-side panel (searchable history) + result card
+side panel (searchable history) + result card + popup converters (.docx/.pdf)
 ```
 
 - **Why an offscreen document?** Manifest V3 service workers have no DOM/canvas and can't host Tesseract's worker — Chrome's `chrome.offscreen` API is the sanctioned home for it.
@@ -106,10 +109,12 @@ setup.ts                 bundles offline OCR assets into libs/
 src/
   background/            service worker: capture, messaging, history, context menu, auth/sync
   content/               drag-select overlay, toasts, result card (+ CSS)
-  offscreen/             hidden page: crop + Tesseract.js OCR
+  offscreen/             hidden page: crop + Tesseract.js OCR + pdf.js PDF extraction
   ocr/                   text cleanup utilities
-  popup/                 toolbar popup: select, file/paste OCR, settings
+  convert/               .docx/.pdf writers + pdf.js text assembly (shared modules)
+  popup/                 toolbar popup: select, file/paste OCR, Convert tab, settings shortcut
   sidepanel/             history panel: search, filter, copy, delete, sign in/out
+  auth/                  sign-in, account dashboard, settings page
   shared/                ambient type definitions (types.d.ts) + Firebase config
 icons/                   extension icons
 docs/                    landing page (GitHub Pages, served from /docs)
@@ -146,6 +151,8 @@ Full details in [PRIVACY.md](PRIVACY.md).
 - Chrome Manifest V3, **TypeScript** (strict mode, compiled with `tsc`) + vanilla HTML/CSS — no framework, no bundler
 - `npm run lint` type-checks without emitting (`tsc --noEmit`)
 - [Tesseract.js v5](https://github.com/naptha/tesseract.js) (LSTM OCR, WebAssembly) — fully local
+- [pdf.js v3](https://mozilla.github.io/pdf.js/) (vendored UMD build) — PDF text extraction; scanned pages fall back to Tesseract
+- Hand-rolled OOXML/PDF writers (`src/convert/`) — Word/PDF output with zero extra dependencies (PDF output uses Helvetica, so non-Latin scripts should use the Word path)
 
 ## Website
 

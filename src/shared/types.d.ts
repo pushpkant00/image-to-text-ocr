@@ -18,6 +18,9 @@ interface OCRSettings {
   language: string;
   removeLineBreaks: boolean;
   mergeSpaces: boolean;
+  showResultCard: boolean;
+  openHistoryAfterOcr: boolean;
+  autoDownload: boolean;
 }
 
 interface RawOcrResult {
@@ -31,6 +34,37 @@ interface OcrRunPayload {
   area?: SelectionArea;
   language?: string;
   dpr?: number;
+}
+
+/** Background <-> offscreen payload/response for PDF text extraction. */
+interface PdfRunPayload {
+  pdfData: ArrayBuffer;
+  language?: string;
+}
+
+interface PdfExtractResponse {
+  text?: string;
+  pages?: number;
+  ocrPages?: number;
+  error?: string;
+}
+
+/** Broadcast by the offscreen document after each PDF page. */
+interface ConvertProgressMsg {
+  page: number;
+  total: number;
+  ocr: boolean;
+}
+
+/** Safety net: last completed PDF extraction, restored if the popup closed. */
+interface LastConvert {
+  text: string;
+  pages: number;
+  ts: number;
+  /** Convert mode active when it ran (pdf-text | pdf-word). */
+  mode?: string;
+  /** Original file name (with extension) for restoring the download name. */
+  name?: string;
 }
 
 interface AuthUser {
@@ -58,6 +92,8 @@ interface LocalStorage {
   syncKeys?: Record<string, string>;
   /** uid of the last account used on this device — device history is isolated per account. */
   lastAccountUid?: string | null;
+  /** Last completed PDF extraction (cleared once read by the popup). */
+  lastConvert?: LastConvert | null;
 }
 
 interface SyncStorage extends OCRSettings {}
@@ -79,6 +115,9 @@ type BackgroundRequest =
   | { type: 'AUTH_RESET_PASSWORD'; email: string }
   | { type: 'AUTH_DELETE'; email: string; password: string }
   | { type: 'SYNC_HISTORY' }
+  | { type: 'PDF_EXTRACT'; pdfData: ArrayBuffer; language?: string; mode?: string; name?: string }
+  | { type: 'GET_LAST_CONVERT' }
+  | { type: 'CONVERT_PROGRESS'; page: number; total: number; ocr: boolean }
   | { type: 'OCR_RUN'; payload: OcrRunPayload };
 
 type ContentRequest =

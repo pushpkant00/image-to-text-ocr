@@ -9,46 +9,90 @@
     <div class="header">
       <h1>Image to Text OCR</h1>
       <div class="header-actions">
-        <button id="account-btn" class="account-btn" type="button" title="Sign in">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span id="account-label">Sign in</span>
+        <button id="settings-btn" class="header-icon-btn" type="button" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
-        <button id="view-history-btn" class="link-btn" type="button">History</button>
+        <button id="account-btn" class="header-icon-btn" type="button" title="Sign in" aria-label="Sign in">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+        <button id="view-history-btn" class="header-icon-btn" type="button" title="History" aria-label="History">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
       </div>
     </div>
 
-    <label class="file-btn">Upload Image File
-      <input type="file" id="ocr-file" accept="image/*" hidden>
-    </label>
-    <p class="hint">Or press <b>Ctrl</b>+<b>Shift</b>+<b>X</b> and drag over the text &nbsp;·&nbsp; paste a screenshot with <b>Ctrl</b>+<b>V</b></p>
-
-    <div id="ocr-status" class="status hidden"></div>
-
-    <div class="settings">
-      <select id="language-select" aria-label="OCR language">
-        <option value="eng" selected>English (offline)</option>
-        <option value="hin">Hindi</option>
-        <option value="spa">Spanish</option>
-        <option value="fra">French</option>
-        <option value="deu">German</option>
-        <option value="jpn">Japanese</option>
-        <option value="chi_sim">Chinese (Simplified)</option>
-      </select>
-      <label><input type="checkbox" id="remove-breaks" checked> Clean up line breaks</label>
-      <label><input type="checkbox" id="merge-spaces" checked> Merge extra spaces</label>
+    <div class="tabs" role="tablist" aria-label="Mode">
+      <button id="tab-ocr" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="ocr-view">OCR</button>
+      <button id="tab-convert" class="tab" type="button" role="tab" aria-selected="false" aria-controls="convert-view">Convert</button>
     </div>
 
-    <div id="last-result" class="result-box hidden">
-      <div class="result-head">
-        <span class="result-title">Last Result</span>
-        <span id="last-accuracy" class="accuracy-badge"></span>
+    <section id="ocr-view" role="tabpanel" aria-labelledby="tab-ocr">
+      <label class="file-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Upload Image File</span>
+        <input type="file" id="ocr-file" accept="image/*" hidden>
+      </label>
+      <p class="hint">Drag over text: <b>Ctrl</b>+<b>Shift</b>+<b>X</b> &nbsp;·&nbsp; Paste screenshot: <b>Ctrl</b>+<b>V</b></p>
+
+      <div id="ocr-status" class="status hidden"></div>
+
+      <div id="last-result" class="result-box hidden">
+        <div class="result-head">
+          <span class="result-title">Last Result</span>
+          <span id="last-accuracy" class="accuracy-badge"></span>
+        </div>
+        <div id="last-text" class="result-line"></div>
+        <button id="copy-last-btn" class="result-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span></button>
       </div>
-      <div id="last-text" class="result-line"></div>
-      <button id="copy-last-btn" class="result-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span></button>
-    </div>
 
-    <p class="shortcut">Right-click any image → “Extract text from this image”</p>
+      <p class="shortcut">Right-click an image to extract text.</p>
+    </section>
+
+    <section id="convert-view" class="hidden" role="tabpanel" aria-labelledby="tab-convert">
+      <div class="pills" role="group" aria-label="Conversion type">
+        <button class="pill active" type="button" data-mode="img-word" aria-pressed="true">Jpg To Word</button>
+        <button class="pill" type="button" data-mode="pdf-text" aria-pressed="false">Pdf To Text</button>
+        <button class="pill" type="button" data-mode="pdf-word" aria-pressed="false">Pdf To Word</button>
+        <button class="pill" type="button" data-mode="text-pdf" aria-pressed="false">Text To PDF</button>
+        <button class="pill" type="button" data-mode="text-word" aria-pressed="false">Text To Word</button>
+      </div>
+
+      <label class="file-btn" id="conv-image-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Choose Image (JPG / PNG)</span>
+        <input type="file" id="conv-image-file" accept="image/*" hidden>
+      </label>
+      <label class="file-btn hidden" id="conv-pdf-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>Choose PDF File</span>
+        <input type="file" id="conv-pdf-file" accept="application/pdf,.pdf" hidden>
+      </label>
+
+      <div id="conv-text-wrap" class="hidden">
+        <textarea id="conv-text" rows="6" placeholder="Type or paste text here…" spellcheck="false" aria-label="Text to convert"></textarea>
+        <button id="conv-use-last" class="link-btn" type="button">Use last OCR result</button>
+      </div>
+
+      <div id="conv-status" class="status hidden"></div>
+      <div id="conv-progress" class="progress hidden">
+        <div id="conv-progress-bar" class="progress-bar"></div>
+      </div>
+
+      <button id="conv-run" class="primary conv-run hidden" type="button">Convert</button>
+
+      <div id="conv-result" class="result-box hidden">
+        <div class="result-head">
+          <span class="result-title">Result</span>
+          <span id="conv-result-meta" class="accuracy-badge is-high"></span>
+        </div>
+        <div id="conv-result-text" class="conv-result-text"></div>
+        <div class="result-actions">
+          <button id="conv-copy" class="result-btn" type="button"><span>Copy</span></button>
+          <button id="conv-download" class="result-btn primary" type="button"><span>Download</span></button>
+        </div>
+      </div>
+    </section>
   </div>
-  <script src="popup.js"></script>
+  <script type="module" src="popup.js"></script>
 </body>
 </html>

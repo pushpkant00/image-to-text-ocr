@@ -117,7 +117,7 @@ interface Window {
   async function runCapture(area: SelectionArea): Promise<void> {
     const indicator = progressToast('Reading text…');
     try {
-      const settings = await chrome.storage.sync.get<SyncStorage>({ language: 'eng' });
+      const settings = await chrome.storage.sync.get<SyncStorage>({ language: 'eng', showResultCard: true });
       const res = await chrome.runtime.sendMessage({
         type: 'OCR_CAPTURE',
         area,
@@ -131,7 +131,7 @@ interface Window {
         toast('No text found in that area', false);
         return;
       }
-      showResultCard(res.entry);
+      if (settings.showResultCard !== false) showResultCard(res.entry);
     } catch (err) {
       indicator.remove();
       toast('OCR failed: ' + (err instanceof Error ? err.message : String(err)), false);

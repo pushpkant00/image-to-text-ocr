@@ -1,4 +1,4 @@
-// One-time setup: bundles the on-device OCR assets into libs/tesseract/.
+// One-time setup: bundles the on-device OCR assets into libs/.
 // Run after `npm install`:
 //
 //   npm run setup
@@ -7,6 +7,7 @@
 //  1. Copies tesseract.min.js + worker.min.js from the npm package
 //  2. Copies the Tesseract core (WASM) files for SIMD + non-SIMD devices
 //  3. Downloads the English traineddata (~3 MB) for fully offline OCR
+//  4. Copies pdf.js (UMD build + worker) for PDF -> text/Word conversion
 // Then build with: npm run build
 
 import { cpSync, mkdirSync, existsSync, writeFileSync } from 'fs';
@@ -16,6 +17,7 @@ import { fileURLToPath } from 'url';
 const root = dirname(fileURLToPath(import.meta.url));
 const libs = join(root, 'libs', 'tesseract');
 const langDir = join(libs, 'lang-data');
+const pdfLibs = join(root, 'libs', 'pdfjs');
 
 const ENG_URL = 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz';
 
@@ -28,6 +30,7 @@ function need(dir: string, hint?: string): void {
 
 need(join(root, 'node_modules', 'tesseract.js'), '');
 need(join(root, 'node_modules', 'tesseract.js-core'), '');
+need(join(root, 'node_modules', 'pdfjs-dist'), '');
 
 mkdirSync(langDir, { recursive: true });
 
@@ -60,6 +63,13 @@ if (existsSync(dest)) {
   const buf = Buffer.from(await res.arrayBuffer());
   writeFileSync(dest, buf);
   console.log(`saved eng.traineddata.gz (${(buf.length / 1024 / 1024).toFixed(1)} MB)`);
+}
+
+// 4. pdf.js (UMD build + worker) for PDF conversion — version-locked by package.json
+mkdirSync(pdfLibs, { recursive: true });
+for (const f of ['pdf.min.js', 'pdf.worker.min.js']) {
+  cpSync(join(root, 'node_modules', 'pdfjs-dist', 'build', f), join(pdfLibs, f));
+  console.log('bundled', f);
 }
 
 console.log('\nSetup complete. Build with: npm run build');
