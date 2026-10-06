@@ -607,15 +607,18 @@ kbd, code {
 .features .feature:nth-child(n+4), .install-steps li:nth-child(4),
 .band-list li:nth-child(4) { --d: 240ms; }
 
-/* Hero demo: selection "crops" in, then the result card pops and its text types */
-.js .mock-selection {
+/* Hero demo: selection "crops" in, then the result card pops and its text types.
+   JS adds .play to start a cycle and removes it to replay after a rest. */
+.js .mock:not(.play) .mock-selection,
+.js .mock:not(.play) .mock-card { opacity: 0; }
+.js .mock.play .mock-selection {
   animation: mockCrop 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms both;
 }
 @keyframes mockCrop {
   from { opacity: 0; transform: scale(0.72); transform-origin: top left; }
   to { opacity: 1; transform: scale(1); }
 }
-.js .mock-card {
+.js .mock.play .mock-card {
   animation: mockPop 320ms ease-out 950ms both;
 }
 @keyframes mockPop {

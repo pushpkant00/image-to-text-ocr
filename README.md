@@ -157,7 +157,7 @@ Full details in [PRIVACY.md](PRIVACY.md).
 
 ## Website
 
-A static landing page lives in [`docs/`](docs/) (plain HTML/CSS plus a small inline script for scroll reveals and a one-shot hero demo; no build step). To publish it with GitHub Pages: repo **Settings → Pages → Deploy from a branch → `main` → `/docs`**, then it serves at `https://pushpkant00.github.io/image-to-text-ocr/`.
+A static landing page lives in [`docs/`](docs/) (plain HTML/CSS plus a small inline script for scroll reveals and the hero demo; no build step). To publish it with GitHub Pages: repo **Settings → Pages → Deploy from a branch → `main` → `/docs`**, then it serves at `https://pushpkant00.github.io/image-to-text-ocr/`.
 
 ## License
 

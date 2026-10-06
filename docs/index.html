@@ -331,25 +331,51 @@
         });
       }
 
-      // Hero demo: type the extracted text into the result card (plays once, no loop)
+      // Hero demo: crop in, pop the card, type the text — then rest and replay
       var mock = document.querySelector('.mock');
       var textEl = document.querySelector('.mock-card-text');
       var foot = document.querySelector('.mock-card-foot');
       if (reduce || !mock || !textEl || !foot) return;
+
       var full = textEl.textContent.trim();
-      textEl.textContent = '';
-      mock.classList.add('typing');
-      var i = 0;
-      window.setTimeout(function type() {
-        i += 1;
-        textEl.textContent = full.slice(0, i);
-        if (i < full.length) {
-          window.setTimeout(type, 16);
-        } else {
-          mock.classList.remove('typing');
-          mock.classList.add('typed');
+      var timers = [];
+      function schedule(fn, ms) {
+        timers.push(window.setTimeout(fn, ms));
+      }
+      function clearTimers() {
+        timers.forEach(function (t) { window.clearTimeout(t); });
+        timers = [];
+      }
+
+      function runCycle() {
+        clearTimers();
+        mock.classList.remove('play', 'typing', 'typed');
+        textEl.textContent = '';
+        void mock.offsetWidth; // force the CSS animations to restart
+        mock.classList.add('play', 'typing');
+
+        schedule(function type() {
+          textEl.textContent = full.slice(0, textEl.textContent.length + 1);
+          if (textEl.textContent.length < full.length) {
+            schedule(type, 16);
+          } else {
+            mock.classList.remove('typing');
+            mock.classList.add('typed');
+            schedule(runCycle, 5000); // rest between replays so it never feels twitchy
+          }
+        }, 1350);
+      }
+
+      runCycle();
+
+      // idle the loop while the tab is hidden
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          clearTimers();
+        } else if (timers.length === 0) {
+          runCycle();
         }
-      }, 1350);
+      });
     })();
   </script>
 </body>
