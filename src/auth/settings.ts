@@ -4,6 +4,17 @@ interface SettingsResponse {
   error?: string;
 }
 
+interface AccountResponse {
+  ok?: boolean;
+  user?: AuthUser | null;
+  error?: string;
+}
+
+interface SimpleResponse {
+  ok?: boolean;
+  error?: string;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const q = <T extends HTMLElement>(id: string): T => {
     const el = document.getElementById(id);
@@ -61,5 +72,89 @@ document.addEventListener('DOMContentLoaded', () => {
   openHistory.addEventListener('change', () => save(openHistory, { openHistoryAfterOcr: openHistory.checked }));
   autoDownload.addEventListener('change', () => save(autoDownload, { autoDownload: autoDownload.checked }));
 
+  // ---------- danger zone (account deletion) ----------
+  const dangerZone = q<HTMLElement>('danger-zone');
+  const deleteAccountBtn = q<HTMLButtonElement>('delete-account-btn');
+  const deleteConfirm = q<HTMLDivElement>('delete-confirm');
+  const deletePassword = q<HTMLInputElement>('delete-password');
+  const deleteStatus = q<HTMLDivElement>('delete-status');
+  const deleteConfirmBtn = q<HTMLButtonElement>('delete-confirm-btn');
+  const deleteCancelBtn = q<HTMLButtonElement>('delete-cancel-btn');
+  let accountEmail = '';
+  let dangerBusy = false;
+
+  function setDangerBusy(value: boolean): void {
+    dangerBusy = value;
+    [deleteAccountBtn, deleteConfirmBtn, deleteCancelBtn].forEach((b) => {
+      b.disabled = value;
+    });
+  }
+
+  function setDeleteStatus(message: string, kind = ''): void {
+    deleteStatus.textContent = message;
+    deleteStatus.classList.remove('hidden', 'error', 'success', 'warn');
+    if (message) deleteStatus.classList.add(kind);
+    else deleteStatus.classList.add('hidden');
+  }
+
+  async function initDangerZone(): Promise<void> {
+    try {
+      const res = (await chrome.runtime.sendMessage({ type: 'AUTH_STATE' })) as AccountResponse;
+      const user = res?.ok ? res.user ?? null : null;
+      if (!user) {
+        dangerZone.classList.add('hidden');
+        return;
+      }
+      accountEmail = user.email;
+      dangerZone.classList.remove('hidden');
+    } catch {
+      dangerZone.classList.add('hidden');
+    }
+  }
+
+  async function doDeleteAccount(): Promise<void> {
+    if (dangerBusy) return;
+    const password = deletePassword.value;
+    if (!password) {
+      setDeleteStatus('Enter your password to confirm.', 'error');
+      return;
+    }
+    setDangerBusy(true);
+    try {
+      setDeleteStatus('Deleting account…');
+      const res = (await chrome.runtime.sendMessage({
+        type: 'AUTH_DELETE',
+        email: accountEmail,
+        password,
+      })) as SimpleResponse;
+      if (!res?.ok) {
+        setDeleteStatus(res?.error || 'Delete failed', 'error');
+        return;
+      }
+      window.location.replace('signin.html');
+    } catch {
+      setDeleteStatus('Delete failed — try again.', 'error');
+    } finally {
+      setDangerBusy(false);
+    }
+  }
+
+  deleteAccountBtn.addEventListener('click', () => {
+    deleteConfirm.classList.toggle('hidden');
+    setDeleteStatus('');
+    deletePassword.value = '';
+    if (!deleteConfirm.classList.contains('hidden')) deletePassword.focus();
+  });
+  deleteCancelBtn.addEventListener('click', () => {
+    deleteConfirm.classList.add('hidden');
+    setDeleteStatus('');
+    deletePassword.value = '';
+  });
+  deleteConfirmBtn.addEventListener('click', () => void doDeleteAccount());
+  deletePassword.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') void doDeleteAccount();
+  });
+
   void load();
+  void initDangerZone();
 });

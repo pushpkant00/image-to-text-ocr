@@ -11,7 +11,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <img src="../icons/icon48.png" alt="" width="26" height="26">
+        <img src="../icons/icon128.png" alt="" width="26" height="26">
         <span class="brand-name">Image to Text OCR</span>
         <span class="brand-tag">Settings</span>
       </div>
@@ -84,6 +84,25 @@
           <p class="setting-desc">Save converted files right away instead of clicking Download.</p>
         </div>
         <input type="checkbox" id="auto-download" class="switch">
+      </div>
+    </section>
+
+    <section id="danger-zone" class="panel danger-zone hidden">
+      <div class="panel-head"><h2>Danger zone</h2></div>
+      <div class="danger-row">
+        <div>
+          <div class="danger-title">Delete your account</div>
+          <p class="danger-note">Deletes your account, your synced history, and this device's history. Enter your password to confirm.</p>
+        </div>
+        <button id="delete-account-btn" class="btn danger-outline auto">Delete account…</button>
+      </div>
+      <div id="delete-confirm" class="delete-confirm hidden">
+        <input type="password" id="delete-password" placeholder="Confirm with your password" autocomplete="current-password">
+        <div id="delete-status" class="auth-status hidden"></div>
+        <div class="confirm-actions">
+          <button id="delete-confirm-btn" class="btn danger auto">Delete everything</button>
+          <button id="delete-cancel-btn" class="btn secondary auto">Cancel</button>
+        </div>
       </div>
     </section>
   </main>

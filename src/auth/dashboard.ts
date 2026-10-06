@@ -35,14 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearHistoryBtn = q<HTMLButtonElement>('clear-history-btn');
   const historyList = q<HTMLDivElement>('history-list');
 
-  // danger zone
-  const deleteAccountBtn = q<HTMLButtonElement>('delete-account-btn');
-  const deleteConfirm = q<HTMLDivElement>('delete-confirm');
-  const deletePassword = q<HTMLInputElement>('delete-password');
-  const deleteStatus = q<HTMLDivElement>('delete-status');
-  const deleteConfirmBtn = q<HTMLButtonElement>('delete-confirm-btn');
-  const deleteCancelBtn = q<HTMLButtonElement>('delete-cancel-btn');
-
   // detail modal
   const detailModal = q<HTMLDivElement>('detail-modal');
   const detailMeta = q<HTMLSpanElement>('detail-meta');
@@ -69,9 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
       resendBtn,
       verifiedBtn,
       syncBtn,
-      deleteAccountBtn,
-      deleteConfirmBtn,
-      deleteCancelBtn,
       clearHistoryBtn,
     ].forEach((b) => {
       b.disabled = value;
@@ -178,43 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       setBusy(false);
     }
-  });
-
-  deleteAccountBtn.addEventListener('click', () => {
-    deleteConfirm.classList.toggle('hidden');
-    setStatus(deleteStatus, '');
-    deletePassword.value = '';
-    if (!deleteConfirm.classList.contains('hidden')) deletePassword.focus();
-  });
-  deleteCancelBtn.addEventListener('click', () => {
-    deleteConfirm.classList.add('hidden');
-    setStatus(deleteStatus, '');
-    deletePassword.value = '';
-  });
-
-  async function doDeleteAccount(): Promise<void> {
-    if (busy || !currentUser) return;
-    const password = deletePassword.value;
-    if (!password) {
-      setStatus(deleteStatus, 'Enter your password to confirm.', 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      setStatus(deleteStatus, 'Deleting account…');
-      const res = await sendMessage({ type: 'AUTH_DELETE', email: currentUser.email, password });
-      if (!res?.ok) {
-        setStatus(deleteStatus, res?.error || 'Delete failed', 'error');
-        return;
-      }
-      goToSignIn();
-    } finally {
-      setBusy(false);
-    }
-  }
-  deleteConfirmBtn.addEventListener('click', doDeleteAccount);
-  deletePassword.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') void doDeleteAccount();
   });
 
   // ---------- history ----------

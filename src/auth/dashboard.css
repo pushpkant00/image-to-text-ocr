@@ -38,7 +38,6 @@ body {
   gap: 16px;
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.brand img { border-radius: 6px; }
 .brand-name { font-size: 15px; font-weight: 650; }
 .brand-tag {
   font-size: 11px;
@@ -284,39 +283,6 @@ body {
   font-size: 13.5px;
 }
 
-/* ---------- danger zone ---------- */
-.danger-zone { border-color: #f0c9cb; }
-.danger-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-}
-.danger-title { font-size: 14px; font-weight: 650; color: var(--danger); margin-bottom: 4px; }
-.danger-note { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
-.delete-confirm {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid #f3dcdd;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.delete-confirm input {
-  max-width: 340px;
-  padding: 9px 11px;
-  border: 1px solid #c9c9c9;
-  border-radius: 8px;
-  font-size: 13.5px;
-  font-family: inherit;
-}
-.delete-confirm input:focus {
-  outline: none;
-  border-color: var(--danger);
-  box-shadow: 0 0 0 3px rgba(164, 38, 44, 0.15);
-}
-.confirm-actions { display: flex; gap: 10px; }
-
 /* ---------- detail modal ---------- */
 .modal {
   position: fixed;
@@ -367,7 +333,7 @@ body {
 /* ---------- responsive ---------- */
 @media (max-width: 720px) {
   .dash { padding: 16px; }
-  .sync-row, .danger-row { flex-direction: column; align-items: stretch; }
+  .sync-row { flex-direction: column; align-items: stretch; }
   .filters { flex-wrap: wrap; }
   .user-email { display: none; }
 }
