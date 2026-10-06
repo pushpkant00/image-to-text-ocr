@@ -36,9 +36,9 @@ body {
   max-width: 980px;
   margin: 0 auto;
   padding: 12px 24px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -50,7 +50,7 @@ body {
   border-radius: 999px;
   padding: 3px 9px;
 }
-.topnav { display: flex; align-items: center; gap: 4px; }
+.topnav { display: flex; align-items: center; gap: 4px; justify-self: center; }
 .topnav-link {
   color: rgba(255, 255, 255, 0.85);
   font-size: 13px;
@@ -62,7 +62,7 @@ body {
 }
 .topnav-link:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
 .topnav-link.active { background: rgba(255, 255, 255, 0.22); color: #fff; }
-.user-menu { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.user-menu { display: flex; align-items: center; gap: 10px; min-width: 0; justify-self: end; }
 .user-email {
   font-size: 13px;
   opacity: 0.95;

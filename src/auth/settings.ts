@@ -74,6 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---------- danger zone (account deletion) ----------
   const dangerZone = q<HTMLElement>('danger-zone');
+  const userMenu = q<HTMLElement>('user-menu');
+  const avatar = q<HTMLSpanElement>('avatar');
+  const userEmail = q<HTMLSpanElement>('user-email');
+  const signOutBtn = q<HTMLButtonElement>('sign-out-btn');
   const deleteAccountBtn = q<HTMLButtonElement>('delete-account-btn');
   const deleteConfirm = q<HTMLDivElement>('delete-confirm');
   const deletePassword = q<HTMLInputElement>('delete-password');
@@ -97,20 +101,33 @@ document.addEventListener('DOMContentLoaded', () => {
     else deleteStatus.classList.add('hidden');
   }
 
-  async function initDangerZone(): Promise<void> {
+  async function loadAccount(): Promise<void> {
     try {
       const res = (await chrome.runtime.sendMessage({ type: 'AUTH_STATE' })) as AccountResponse;
       const user = res?.ok ? res.user ?? null : null;
       if (!user) {
         dangerZone.classList.add('hidden');
+        userMenu.classList.add('hidden');
         return;
       }
       accountEmail = user.email;
+      avatar.textContent = (user.email || '?').trim().charAt(0).toUpperCase() || '?';
+      userEmail.textContent = user.email || '';
       dangerZone.classList.remove('hidden');
+      userMenu.classList.remove('hidden');
     } catch {
       dangerZone.classList.add('hidden');
+      userMenu.classList.add('hidden');
     }
   }
+
+  signOutBtn.addEventListener('click', async () => {
+    try {
+      await chrome.runtime.sendMessage({ type: 'AUTH_SIGN_OUT' });
+    } finally {
+      window.location.replace('signin.html');
+    }
+  });
 
   async function doDeleteAccount(): Promise<void> {
     if (dangerBusy) return;
@@ -156,5 +173,5 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   void load();
-  void initDangerZone();
+  void loadAccount();
 });
