@@ -1,7 +1,8 @@
-// Firebase project config — fill these in from your Firebase console:
-// Project settings -> General -> Your apps -> Web app -> SDK setup and configuration -> Config
-// Then enable Authentication -> Sign-in method -> Email/Password,
-// and create a Cloud Firestore database.
+// Firebase project config — values are injected at build time from the
+// gitignored firebase-secrets.json (see inject-config.ts).
+// Setup: copy firebase-secrets.example.json -> firebase-secrets.json and fill in
+// your values (Firebase console -> Project settings -> Your apps -> Web app -> Config).
+// Without that file the extension still builds; sign-in and cloud sync stay disabled.
 export interface FirebaseConfig {
   apiKey: string;
   authDomain: string;
@@ -9,11 +10,13 @@ export interface FirebaseConfig {
 }
 
 export const FIREBASE_CONFIG: FirebaseConfig = {
-  apiKey: 'AIzaSyAKO2433a1I7OHTCZaFtZLQkYAco3Ix4hE',
-  authDomain: 'extension-a6144.firebaseapp.com',
-  projectId: 'extension-a6144',
+  apiKey: '__FIREBASE_API_KEY__',
+  authDomain: '__FIREBASE_AUTH_DOMAIN__',
+  projectId: '__FIREBASE_PROJECT_ID__',
 };
 
 export function isFirebaseConfigured(): boolean {
-  return Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
+  const { apiKey, projectId } = FIREBASE_CONFIG;
+  // placeholders were not replaced => no firebase-secrets.json at build time
+  return Boolean(apiKey && projectId && !apiKey.startsWith('__'));
 }

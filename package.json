@@ -8,7 +8,7 @@
   },
   "scripts": {
     "setup": "node setup.ts",
-    "build": "node build.ts && tsc && node -e \"console.log('Build complete -> dist/  ·  Load unpacked: chrome://extensions -> dist/')\"",
+    "build": "node build.ts && tsc && node inject-config.ts && node -e \"console.log('Build complete -> dist/  ·  Load unpacked: chrome://extensions -> dist/')\"",
     "icons": "node icons/generate.ts",
     "lint": "tsc --noEmit && tsc -p tsconfig.tools.json"
   },

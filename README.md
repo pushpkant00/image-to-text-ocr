@@ -62,7 +62,7 @@ One-time setup:
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
 2. **Authentication → Sign-in method → Email/Password** → enable
 3. **Firestore Database → Create database** (production mode)
-4. Project settings → **Your apps → Web app** → copy the config into `src/shared/firebase-config.ts`
+4. Project settings → **Your apps → Web app** → copy the config into `firebase-secrets.json` (start from `firebase-secrets.example.json`; the file is gitignored and injected into `dist/` at build time — without it the extension still builds, but sign-in and cloud sync stay disabled)
 5. Firestore **Rules** — only the owner can read/write their history:
 
 ```
@@ -105,6 +105,7 @@ side panel (searchable history) + result card + popup converters (.docx/.pdf)
 ```
 manifest.json            MV3 manifest (dist-relative paths)
 build.ts                 assembles dist/ (page assets + runs tsc, no bundler needed)
+inject-config.ts         injects gitignored firebase-secrets.json into dist/ after tsc
 setup.ts                 bundles offline OCR assets into libs/
 src/
   background/            service worker: capture, messaging, history, context menu, auth/sync

@@ -12,5 +12,5 @@
     "lib": ["ES2022", "DOM"],
     "types": ["node"]
   },
-  "include": ["build.ts", "setup.ts", "icons/*.ts"]
+  "include": ["build.ts", "setup.ts", "inject-config.ts", "icons/*.ts"]
 }
