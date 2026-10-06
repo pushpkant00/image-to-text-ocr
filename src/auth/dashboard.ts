@@ -184,15 +184,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  function emptyState(msg: string): void {
+  function emptyState(kind: 'initial' | 'nomatch'): void {
     historyList.innerHTML = '';
-    const d = document.createElement('div');
-    d.className = 'empty-state';
-    d.textContent = msg;
-    historyList.appendChild(d);
+    const wrap = document.createElement('div');
+    wrap.className = 'empty-state';
+
+    const icon = document.createElement('span');
+    icon.className = 'empty-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/>' +
+      '<path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/>' +
+      '<path d="M8 10.5h8"/><path d="M8 13.5h5"/></svg>';
+
+    const title = document.createElement('div');
+    title.className = 'empty-title';
+    const hint = document.createElement('div');
+    hint.className = 'empty-hint';
+
+    if (kind === 'initial') {
+      title.textContent = 'No OCR results yet';
+      hint.innerHTML =
+        'Press <kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Shift</kbd> + <kbd class="kbd">X</kbd> on any page, ' +
+        'or right-click an image to extract its text.';
+    } else {
+      title.textContent = 'No results match your search';
+      hint.textContent = 'Try a different word, or set the language filter back to All Languages.';
+    }
+
+    wrap.append(icon, title, hint);
+    historyList.appendChild(wrap);
   }
 
   function renderStats(): void {
+    if (history.length === 0) {
+      stats.textContent = '';
+      return;
+    }
     const langs = new Set(history.map((e) => e.language).filter(Boolean));
     const parts = [`${history.length} result${history.length === 1 ? '' : 's'}`];
     if (langs.size) parts.push(`${langs.size} language${langs.size === 1 ? '' : 's'}`);
@@ -209,11 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         (filterLang === 'all' || e.language === filterLang),
     );
     if (filtered.length === 0) {
-      emptyState(
-        history.length === 0
-          ? 'No OCR results yet. Press Ctrl+Shift+X on any page, or right-click an image.'
-          : 'No results match your search.',
-      );
+      emptyState(history.length === 0 ? 'initial' : 'nomatch');
       return;
     }
     historyList.innerHTML = '';
@@ -300,12 +325,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = await refreshAccount();
     if (!user) return;
     await loadHistory();
+    // one warning only: the verify banner above — sync status is for sync results
     if (user.emailVerified) {
       syncNow(false).catch((err: unknown) =>
         setStatus(syncStatus, err instanceof Error ? err.message : 'Sync failed', 'error'),
       );
-    } else {
-      setStatus(syncStatus, 'Sync is off until your email is verified — history stays only on this device.', 'warn');
     }
   })();
 });

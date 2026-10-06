@@ -25,7 +25,10 @@
   <main class="dash">
     <section class="panel">
       <div class="panel-head">
-        <h2>OCR</h2>
+        <div class="panel-title">
+          <span class="panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.35 2.3 3.7 5.3 3.7 8.5S14.35 17.7 12 20c-2.35-2.3-3.7-5.3-3.7-8.5S9.65 5.8 12 3.5z"/></svg></span>
+          <h2>OCR</h2>
+        </div>
         <span class="save-status hidden" role="status" aria-live="polite"></span>
       </div>
       <div class="setting-row">
@@ -61,7 +64,10 @@
 
     <section class="panel">
       <div class="panel-head">
-        <h2>Behavior</h2>
+        <div class="panel-title">
+          <span class="panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h8"/><circle cx="15" cy="7" r="2.3"/><path d="M4 12h4"/><circle cx="11" cy="12" r="2.3"/><path d="M4 17h10"/><circle cx="17" cy="17" r="2.3"/></svg></span>
+          <h2>Behavior</h2>
+        </div>
         <span class="save-status hidden" role="status" aria-live="polite"></span>
       </div>
       <div class="setting-row">
@@ -88,7 +94,12 @@
     </section>
 
     <section id="danger-zone" class="panel danger-zone hidden">
-      <div class="panel-head"><h2>Danger zone</h2></div>
+      <div class="panel-head">
+        <div class="panel-title">
+          <span class="panel-icon danger" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5L21 19.5H3L12 4.5z"/><path d="M12 10.5v3.5"/><path d="M12 17h.01"/></svg></span>
+          <h2>Danger zone</h2>
+        </div>
+      </div>
       <div class="danger-row">
         <div>
           <div class="danger-title">Delete your account</div>
@@ -98,7 +109,7 @@
       </div>
       <div id="delete-confirm" class="delete-confirm hidden">
         <input type="password" id="delete-password" placeholder="Confirm with your password" autocomplete="current-password">
-        <div id="delete-status" class="auth-status hidden"></div>
+        <div id="delete-status" class="auth-status hidden" role="status" aria-live="polite"></div>
         <div class="confirm-actions">
           <button id="delete-confirm-btn" class="btn danger auto">Delete everything</button>
           <button id="delete-cancel-btn" class="btn secondary auto">Cancel</button>
