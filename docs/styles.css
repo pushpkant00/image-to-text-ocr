@@ -590,6 +590,56 @@ kbd, code {
 .footer-note { font-size: 13.5px; color: var(--muted); flex: 1; min-width: 260px; }
 .footer-link { font-size: 14px; font-weight: 600; }
 
+/* ---------- Motion (skill guidance: reduced-motion guard, 1–2 elements per view) ---------- */
+
+/* Scroll reveal — one-shot, only when JS added the .js flag */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 480ms ease, transform 480ms ease;
+  transition-delay: var(--d, 0ms);
+}
+.js .reveal.in { opacity: 1; transform: none; }
+.steps .step:nth-child(2), .features .feature:nth-child(2),
+.install-steps li:nth-child(2), .band-list li:nth-child(2) { --d: 80ms; }
+.steps .step:nth-child(3), .features .feature:nth-child(3),
+.install-steps li:nth-child(3), .band-list li:nth-child(3) { --d: 160ms; }
+.features .feature:nth-child(n+4), .install-steps li:nth-child(4),
+.band-list li:nth-child(4) { --d: 240ms; }
+
+/* Hero demo: selection "crops" in, then the result card pops and its text types */
+.js .mock-selection {
+  animation: mockCrop 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms both;
+}
+@keyframes mockCrop {
+  from { opacity: 0; transform: scale(0.72); transform-origin: top left; }
+  to { opacity: 1; transform: scale(1); }
+}
+.js .mock-card {
+  animation: mockPop 320ms ease-out 950ms both;
+}
+@keyframes mockPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.mock.typing .mock-card-foot { opacity: 0; }
+.mock.typed .mock-card-foot { opacity: 1; transition: opacity 350ms ease; }
+
+/* Open-source badge: gentle live ping on the dot */
+.badge-dot { position: relative; }
+.badge-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--brand);
+  animation: badgePing 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes badgePing {
+  0% { transform: scale(1); opacity: 0.65; }
+  75%, 100% { transform: scale(2.6); opacity: 0; }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 960px) {
   .nav { gap: 16px; }
@@ -629,4 +679,7 @@ kbd, code {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+  .js .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .js .mock-selection, .js .mock-card { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .badge-dot::after { animation: none !important; display: none; }
 }

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>document.documentElement.classList.add('js');</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Image to Text OCR — Extract text from any image, on your device</title>
   <meta name="description" content="Free, open-source Chrome extension. Select an area, right-click an image, or paste a screenshot — OCR runs on your device and the text is ready to copy. 7 languages, fully offline, optional sync.">
@@ -98,12 +99,12 @@
     <!-- How it works -->
     <section id="how" class="section" aria-labelledby="how-title">
       <div class="container">
-        <header class="section-head">
+        <header class="section-head reveal">
           <h2 id="how-title">How it works</h2>
           <p>Three ways to grab text — all of them stay on your machine.</p>
         </header>
         <ol class="steps">
-          <li class="step">
+          <li class="step reveal">
             <span class="step-num" aria-hidden="true">1</span>
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4H6a2 2 0 0 0-2 2v2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M12 10.5v3"/><path d="M10.5 12h3"/></svg>
@@ -111,7 +112,7 @@
             <h3>Select, right-click, or paste</h3>
             <p>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> and drag over any area, right-click an image and choose <em>Extract text from this image</em>, or paste a screenshot with <kbd>Ctrl</kbd>+<kbd>V</kbd>.</p>
           </li>
-          <li class="step">
+          <li class="step reveal">
             <span class="step-num" aria-hidden="true">2</span>
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/><path d="M3.5 9h17"/><path d="M3.5 15h17"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9Z"/></svg>
@@ -119,7 +120,7 @@
             <h3>OCR runs on your device</h3>
             <p>Tesseract.js recognizes the text locally in an offscreen document. English works fully offline out of the box; other languages download once and cache.</p>
           </li>
-          <li class="step">
+          <li class="step reveal">
             <span class="step-num" aria-hidden="true">3</span>
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.75h6.6L19 9.2v10.05a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.75a1 1 0 0 1 1-1Z"/><path d="M13.5 4v5.5H19"/><path d="M9 13.5h6"/><path d="M9 17h4"/></svg>
@@ -134,47 +135,47 @@
     <!-- Features -->
     <section id="features" class="section section-alt" aria-labelledby="features-title">
       <div class="container">
-        <header class="section-head">
+        <header class="section-head reveal">
           <h2 id="features-title">Everything you need, nothing you don't</h2>
           <p>Built as a fast, private utility — not a service you have to trust.</p>
         </header>
         <ul class="features">
-          <li class="feature">
+          <li class="feature reveal">
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 9.5C8 19.4 5 15.4 5 11V6l7-3Z"/><path d="m9 12 2 2 4-4.5"/></svg>
             </span>
             <h3>Private by design</h3>
             <p>Images are captured and read in the browser. No servers, no accounts, no telemetry — your text never leaves the device unless you choose to sync.</p>
           </li>
-          <li class="feature">
+          <li class="feature reveal">
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/><path d="M3.5 9h17"/><path d="M3.5 15h17"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9Z"/></svg>
             </span>
             <h3>7 languages</h3>
             <p>English (offline by default), Hindi, Spanish, French, German, Japanese, and Simplified Chinese. Pick the language per capture or set it as default.</p>
           </li>
-          <li class="feature">
+          <li class="feature reveal">
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.75 10.75V7.75a4.25 4.25 0 0 1 8.5 0v3"/><rect x="5.5" y="10.75" width="13" height="9.25" rx="1.5"/></svg>
             </span>
             <h3>Works offline</h3>
             <p>After the first run, English recognition is completely offline. Capture text on a plane, behind a firewall, or on a locked-down network.</p>
           </li>
-          <li class="feature">
+          <li class="feature reveal">
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/><path d="M12 7.5V12l3.2 1.9"/></svg>
             </span>
             <h3>Searchable history</h3>
             <p>Every result lands in a side panel you can search, filter by language, and clear. Confidence scores tell you how sure the recognition was.</p>
           </li>
-          <li class="feature">
+          <li class="feature reveal">
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5a4.5 4.5 0 0 1-.4-8.98 6 6 0 0 1 11.55 1.36A3.75 3.75 0 0 1 17.4 18.5H7Z"/><path d="M9.5 14.5 12 17l2.5-2.5"/><path d="M12 17v-5"/></svg>
             </span>
             <h3>Optional cloud sync</h3>
             <p>Create an account if you want history on all your machines. Sync is opt-in, merge-based, and can be cleared at any time.</p>
           </li>
-          <li class="feature">
+          <li class="feature reveal">
             <span class="icon-box" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="11" rx="2"/><path d="M7 9h.01"/><path d="M10.5 9h.01"/><path d="M14 9h.01"/><path d="M17.5 9h.01"/><path d="M8 12.5h8"/><path d="M9.5 19.5h5"/></svg>
             </span>
@@ -188,7 +189,7 @@
     <!-- Install -->
     <section id="install" class="section" aria-labelledby="install-title">
       <div class="container install-grid">
-        <header class="section-head left">
+        <header class="section-head left reveal">
           <h2 id="install-title">Install in under a minute</h2>
           <p>The extension isn't in the Web Store yet — load it unpacked, Chrome-Extensions-style.</p>
           <a class="btn btn-primary" href="https://github.com/pushpkant00/image-to-text-ocr" target="_blank" rel="noopener">
@@ -197,19 +198,19 @@
           </a>
         </header>
         <ol class="install-steps">
-          <li>
+          <li class="reveal">
             <span class="install-num" aria-hidden="true">1</span>
             <div><h3>Get the files</h3><p>Download or clone the repository from GitHub, then run <code>npm install</code>, <code>npm run setup</code>, and <code>npm run build</code> — or grab a ready-made release if available.</p></div>
           </li>
-          <li>
+          <li class="reveal">
             <span class="install-num" aria-hidden="true">2</span>
             <div><h3>Open the extensions page</h3><p>Visit <code>chrome://extensions</code> and turn on <strong>Developer mode</strong> (toggle, top-right).</p></div>
           </li>
-          <li>
+          <li class="reveal">
             <span class="install-num" aria-hidden="true">3</span>
             <div><h3>Load unpacked</h3><p>Click <strong>Load unpacked</strong> and select the project's <code>dist</code> folder. The icon appears in your toolbar.</p></div>
           </li>
-          <li>
+          <li class="reveal">
             <span class="install-num" aria-hidden="true">4</span>
             <div><h3>Extract your first text</h3><p>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> on any page, drag over some text, and copy the result.</p></div>
           </li>
@@ -220,7 +221,7 @@
     <!-- Privacy -->
     <section id="privacy" class="section band" aria-labelledby="privacy-title">
       <div class="container band-grid">
-        <div>
+        <div class="reveal">
           <span class="icon-box on-dark" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 9.5C8 19.4 5 15.4 5 11V6l7-3Z"/><path d="m9 12 2 2 4-4.5"/></svg>
           </span>
@@ -228,19 +229,19 @@
           <p class="band-lead">Most OCR tools upload a screenshot of your screen to a server. This one doesn't — recognition happens inside your browser, in an offscreen document, with the language model stored locally.</p>
         </div>
         <ul class="band-list">
-          <li>
+          <li class="reveal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.2 2.4 2.4 4.6-5"/></svg>
             No accounts required — every core feature works without signing in.
           </li>
-          <li>
+          <li class="reveal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.2 2.4 2.4 4.6-5"/></svg>
             Screenshots are processed locally and discarded after OCR.
           </li>
-          <li>
+          <li class="reveal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.2 2.4 2.4 4.6-5"/></svg>
             Cloud sync is opt-in: create an account only if you want cross-device history.
           </li>
-          <li>
+          <li class="reveal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.2 2.4 2.4 4.6-5"/></svg>
             Fully open source — read the code and verify every claim yourself.
           </li>
@@ -252,10 +253,10 @@
     <!-- FAQ -->
     <section id="faq" class="section" aria-labelledby="faq-title">
       <div class="container narrow">
-        <header class="section-head">
+        <header class="section-head reveal">
           <h2 id="faq-title">FAQ</h2>
         </header>
-        <div class="faq">
+        <div class="faq reveal">
           <details>
             <summary>Does it need an internet connection?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
             <p>English recognition is fully offline after setup. Other languages download their model once (about 3&nbsp;MB) and are cached for offline use afterwards.</p>
@@ -282,7 +283,7 @@
 
     <!-- CTA -->
     <section class="section cta" aria-labelledby="cta-title">
-      <div class="container cta-inner">
+      <div class="container cta-inner reveal">
         <h2 id="cta-title">Stop retyping what's already on screen</h2>
         <p>Install the extension and extract your first image in under a minute.</p>
         <div class="hero-actions center">
@@ -306,5 +307,50 @@
       <a class="footer-link" href="https://github.com/pushpkant00/image-to-text-ocr" target="_blank" rel="noopener">GitHub repository</a>
     </div>
   </footer>
+
+  <script>
+    (function () {
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Scroll reveal — one-shot per element, skipped entirely under reduced motion
+      var reveals = document.querySelectorAll('.reveal');
+      if (reduce || !('IntersectionObserver' in window)) {
+        reveals.forEach(function (el) { el.classList.add('in'); });
+      } else {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('in');
+            io.unobserve(entry.target);
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        reveals.forEach(function (el) {
+          // anything already on screen reveals immediately (no flash)
+          if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('in');
+          else io.observe(el);
+        });
+      }
+
+      // Hero demo: type the extracted text into the result card (plays once, no loop)
+      var mock = document.querySelector('.mock');
+      var textEl = document.querySelector('.mock-card-text');
+      var foot = document.querySelector('.mock-card-foot');
+      if (reduce || !mock || !textEl || !foot) return;
+      var full = textEl.textContent.trim();
+      textEl.textContent = '';
+      mock.classList.add('typing');
+      var i = 0;
+      window.setTimeout(function type() {
+        i += 1;
+        textEl.textContent = full.slice(0, i);
+        if (i < full.length) {
+          window.setTimeout(type, 16);
+        } else {
+          mock.classList.remove('typing');
+          mock.classList.add('typed');
+        }
+      }, 1350);
+    })();
+  </script>
 </body>
 </html>
