@@ -80,11 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const signOutBtn = q<HTMLButtonElement>('sign-out-btn');
   const deleteAccountBtn = q<HTMLButtonElement>('delete-account-btn');
   const deleteConfirm = q<HTMLDivElement>('delete-confirm');
-  const deletePassword = q<HTMLInputElement>('delete-password');
+  const deleteConfirmText = q<HTMLInputElement>('delete-confirm-text');
   const deleteStatus = q<HTMLDivElement>('delete-status');
   const deleteConfirmBtn = q<HTMLButtonElement>('delete-confirm-btn');
   const deleteCancelBtn = q<HTMLButtonElement>('delete-cancel-btn');
-  let accountEmail = '';
   let dangerBusy = false;
 
   function setDangerBusy(value: boolean): void {
@@ -110,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
         userMenu.classList.add('hidden');
         return;
       }
-      accountEmail = user.email;
       avatar.textContent = (user.email || '?').trim().charAt(0).toUpperCase() || '?';
       userEmail.textContent = user.email || '';
       dangerZone.classList.remove('hidden');
@@ -131,19 +129,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function doDeleteAccount(): Promise<void> {
     if (dangerBusy) return;
-    const password = deletePassword.value;
-    if (!password) {
-      setDeleteStatus('Enter your password to confirm.', 'error');
+    if (deleteConfirmText.value.trim().toUpperCase() !== 'DELETE') {
+      setDeleteStatus('Type DELETE to confirm.', 'error');
       return;
     }
     setDangerBusy(true);
     try {
-      setDeleteStatus('Deleting account…');
-      const res = (await chrome.runtime.sendMessage({
-        type: 'AUTH_DELETE',
-        email: accountEmail,
-        password,
-      })) as SimpleResponse;
+      setDeleteStatus('Confirming with Google, then deleting…');
+      const res = (await chrome.runtime.sendMessage({ type: 'AUTH_DELETE' })) as SimpleResponse;
       if (!res?.ok) {
         setDeleteStatus(res?.error || 'Delete failed', 'error');
         return;
@@ -159,16 +152,16 @@ document.addEventListener('DOMContentLoaded', () => {
   deleteAccountBtn.addEventListener('click', () => {
     deleteConfirm.classList.toggle('hidden');
     setDeleteStatus('');
-    deletePassword.value = '';
-    if (!deleteConfirm.classList.contains('hidden')) deletePassword.focus();
+    deleteConfirmText.value = '';
+    if (!deleteConfirm.classList.contains('hidden')) deleteConfirmText.focus();
   });
   deleteCancelBtn.addEventListener('click', () => {
     deleteConfirm.classList.add('hidden');
     setDeleteStatus('');
-    deletePassword.value = '';
+    deleteConfirmText.value = '';
   });
   deleteConfirmBtn.addEventListener('click', () => void doDeleteAccount());
-  deletePassword.addEventListener('keydown', (e) => {
+  deleteConfirmText.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') void doDeleteAccount();
   });
 

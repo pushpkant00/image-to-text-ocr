@@ -33,22 +33,11 @@
           <span class="panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.47-2.98 7.69-7 9-4.02-1.31-7-4.53-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
           <h2>Account &amp; sync</h2>
         </div>
-        <span id="verify-pill" class="pill warn hidden">Email unverified</span>
-      </div>
-      <div id="verify-banner" class="verify-banner hidden">
-        <span class="verify-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7.5l8 6 8-6"/></svg></span>
-        <div class="verify-body">
-          <div class="verify-text">Verify your email to enable sync — we sent a link to your inbox.</div>
-          <div class="verify-actions">
-            <button id="resend-btn" class="link-btn">Resend email</button>
-            <button id="verified-btn" class="link-btn em">I've verified</button>
-          </div>
-        </div>
       </div>
       <div class="sync-row">
         <div class="sync-info">
           <div id="sync-status" class="auth-status hidden" role="status" aria-live="polite"></div>
-          <p class="sync-note">History lives on this device. Sync merges it with your other devices — text is end-to-end encrypted, so only you can read it.</p>
+          <p class="sync-note">History lives on this device. Sync merges it with your other devices — text is encrypted before upload and only your signed-in account can read it.</p>
         </div>
         <button id="sync-btn" class="btn primary auto">Sync Now</button>
       </div>
@@ -62,7 +51,6 @@
         </div>
         <span id="stats" class="stats"></span>
       </div>
-      <div id="backup-warn" class="backup-note hidden">History is only saved on this device until you verify your email — removing or reinstalling the extension erases it.</div>
       <div class="filters">
         <div class="search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20 20"/></svg>

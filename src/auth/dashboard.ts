@@ -20,16 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const signOutBtn = q<HTMLButtonElement>('sign-out-btn');
 
   // account & sync
-  const verifyPill = q<HTMLSpanElement>('verify-pill');
-  const verifyBanner = q<HTMLDivElement>('verify-banner');
-  const resendBtn = q<HTMLButtonElement>('resend-btn');
-  const verifiedBtn = q<HTMLButtonElement>('verified-btn');
   const syncStatus = q<HTMLDivElement>('sync-status');
   const syncBtn = q<HTMLButtonElement>('sync-btn');
 
   // history
   const stats = q<HTMLSpanElement>('stats');
-  const backupWarn = q<HTMLDivElement>('backup-warn');
   const searchInput = q<HTMLInputElement>('search-input');
   const filterLanguage = q<HTMLSelectElement>('filter-language');
   const clearHistoryBtn = q<HTMLButtonElement>('clear-history-btn');
@@ -44,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let history: OCRHistoryEntry[] = [];
   let currentDetail: OCRHistoryEntry | null = null;
-  let currentUser: AuthUser | null = null;
   let busy = false;
 
   function setStatus(el: HTMLElement, message: string, kind = ''): void {
@@ -56,16 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setBusy(value: boolean): void {
     busy = value;
-    [
-      signOutBtn,
-      resendBtn,
-      verifiedBtn,
-      syncBtn,
-      clearHistoryBtn,
-    ].forEach((b) => {
+    [signOutBtn, syncBtn, clearHistoryBtn].forEach((b) => {
       b.disabled = value;
     });
-    syncBtn.disabled = value || currentUser?.emailVerified !== true;
   }
 
   async function sendMessage(message: BackgroundRequest): Promise<RuntimeResponse> {
@@ -84,16 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
       goToSignIn();
       return null;
     }
-    currentUser = user;
     avatar.textContent = (user.email || '?').trim().charAt(0).toUpperCase() || '?';
     userEmail.textContent = user.email || '';
-    const verified = user.emailVerified === true;
-    verifyPill.classList.toggle('hidden', verified);
-    verifyPill.classList.toggle('warn', !verified);
-    verifyPill.textContent = 'Email unverified';
-    verifyBanner.classList.toggle('hidden', verified);
-    backupWarn.classList.toggle('hidden', verified);
-    syncBtn.disabled = busy || !verified;
     return user;
   }
 
@@ -132,38 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       setStatus(syncStatus, 'Syncing…');
       await syncNow(true);
-    } finally {
-      setBusy(false);
-    }
-  });
-
-  resendBtn.addEventListener('click', async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const res = await sendMessage({ type: 'AUTH_RESEND_VERIFY' });
-      setStatus(
-        syncStatus,
-        res?.ok ? 'Verification email resent — check your inbox.' : res?.error || 'Could not send the email.',
-        res?.ok ? 'success' : 'error',
-      );
-    } finally {
-      setBusy(false);
-    }
-  });
-
-  verifiedBtn.addEventListener('click', async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      // AUTH_STATE re-checks with Firebase while the session is unverified.
-      const user = await refreshAccount();
-      if (user?.emailVerified) {
-        setStatus(syncStatus, 'Email verified — sync enabled.', 'success');
-        await syncNow(true);
-      } else {
-        setStatus(syncStatus, 'Not verified yet — click the link in your email, then try again.', 'warn');
-      }
     } finally {
       setBusy(false);
     }
@@ -325,11 +272,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = await refreshAccount();
     if (!user) return;
     await loadHistory();
-    // one warning only: the verify banner above — sync status is for sync results
-    if (user.emailVerified) {
-      syncNow(false).catch((err: unknown) =>
-        setStatus(syncStatus, err instanceof Error ? err.message : 'Sync failed', 'error'),
-      );
-    }
+    // Auto-sync on open; failures surface in the sync status line.
+    syncNow(false).catch((err: unknown) =>
+      setStatus(syncStatus, err instanceof Error ? err.message : 'Sync failed', 'error'),
+    );
   })();
 });

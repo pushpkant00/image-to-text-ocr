@@ -108,12 +108,9 @@ type BackgroundRequest =
   | { type: 'CLEAR_HISTORY' }
   | { type: 'DELETE_ENTRY'; id: string }
   | { type: 'AUTH_STATE' }
-  | { type: 'AUTH_SIGN_IN'; email: string; password: string }
-  | { type: 'AUTH_SIGN_UP'; email: string; password: string }
+  | { type: 'AUTH_SIGN_IN_GOOGLE' }
   | { type: 'AUTH_SIGN_OUT' }
-  | { type: 'AUTH_RESEND_VERIFY' }
-  | { type: 'AUTH_RESET_PASSWORD'; email: string }
-  | { type: 'AUTH_DELETE'; email: string; password: string }
+  | { type: 'AUTH_DELETE' }
   | { type: 'SYNC_HISTORY' }
   | { type: 'PDF_EXTRACT'; pdfData: ArrayBuffer; language?: string; mode?: string; name?: string }
   | { type: 'GET_LAST_CONVERT' }

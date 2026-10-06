@@ -21,7 +21,7 @@ if (!existsSync(secretsPath)) {
   process.exit(0);
 }
 
-type Secrets = { apiKey?: string; authDomain?: string; projectId?: string };
+type Secrets = { apiKey?: string; authDomain?: string; projectId?: string; googleClientId?: string };
 const secrets = JSON.parse(readFileSync(secretsPath, 'utf8')) as Secrets;
 
 const pairs: Array<[string, string | undefined]> = [
@@ -45,4 +45,20 @@ if (empty > 0 || out.includes('__FIREBASE_')) {
   console.warn(`[config] ${empty} value(s) empty in firebase-secrets.json — placeholders remain, auth stays disabled.`);
 } else {
   console.log('[config] Firebase config injected -> dist/shared/firebase-config.js');
+}
+
+// Google OAuth client id -> dist/manifest.json identity.oauth2 (chrome.identity.getAuthToken).
+const manifestPath = join(root, 'dist', 'manifest.json');
+if (secrets.googleClientId) {
+  if (!existsSync(manifestPath)) {
+    console.error('[config] dist/manifest.json missing — run build.ts first.');
+    process.exit(1);
+  }
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
+  const identity = (manifest.identity as Record<string, unknown> | undefined) || {};
+  manifest.identity = { ...identity, oauth2: { client_id: secrets.googleClientId } };
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+  console.log('[config] Google OAuth client id injected -> dist/manifest.json');
+} else {
+  console.warn('[config] googleClientId missing in firebase-secrets.json — "Continue with Google" will report a setup error.');
 }

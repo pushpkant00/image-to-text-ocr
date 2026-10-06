@@ -8,7 +8,6 @@
   --line: #e0e0e0;
   --bg: #f3f6fb;
   --error: #a4262c;
-  --error-line: #c50f1f;
 }
 
 body {
@@ -44,7 +43,7 @@ body {
 }
 
 /* ---------- brand ---------- */
-.brand { text-align: center; margin-bottom: 22px; }
+.brand { text-align: center; margin-bottom: 24px; }
 .brand-icon {
   display: block;
   margin: 0 auto 12px;
@@ -57,147 +56,7 @@ body {
 .brand h1 { font-size: 21px; font-weight: 650; letter-spacing: -0.2px; }
 .brand-sub { font-size: 13.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
 
-/* ---------- segmented mode tabs ---------- */
-.mode-tabs {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  background: #eef1f5;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  padding: 4px;
-  margin-bottom: 18px;
-}
-/* Sliding thumb: pure decoration keyed off aria-selected, so the selected
-   state is always correct even if motion is disabled or interrupted. */
-.mode-thumb {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  width: calc((100% - 8px) / 2);
-  background: #fff;
-  border: 1px solid rgba(0, 40, 90, 0.07);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 40, 90, 0.14);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-}
-.mode-tabs:has(#sign-up-tab[aria-selected='true']) .mode-thumb { transform: translateX(100%); }
-.mode-tab {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 9px 8px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13.5px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: color 0.15s, opacity 0.15s;
-}
-.mode-tab:hover { color: var(--text); }
-.mode-tab:active:not(:disabled) { opacity: 0.75; }
-.mode-tab.active,
-.mode-tab[aria-selected='true'] { color: var(--brand-dark); background: transparent; box-shadow: none; }
-.mode-tab:disabled { opacity: 0.6; cursor: default; }
-.tab-icon { width: 15px; height: 15px; flex: none; }
-
-/* ---------- form ---------- */
-.field { margin-bottom: 14px; }
-.field label {
-  display: block;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #444;
-  margin-bottom: 6px;
-}
-.field input {
-  width: 100%;
-  padding: 11px 12px;
-  border: 1px solid #c9c9c9;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  background: #fff;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.field input::placeholder { color: #767676; }
-.field input:focus {
-  outline: none;
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.22);
-}
-.field input.invalid {
-  border-color: var(--error-line);
-}
-.field input.invalid:focus {
-  box-shadow: 0 0 0 3px rgba(197, 15, 31, 0.18);
-}
-
-.field-error {
-  font-size: 12px;
-  color: var(--error);
-  margin-top: 5px;
-  line-height: 1.4;
-}
-.field-error.hidden { display: none; }
-.field-foot {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-.field-foot .field-error { margin-top: 5px; }
-
-/* password visibility toggle */
-.password-wrap { position: relative; }
-.password-wrap input { padding-right: 40px; }
-.pw-toggle {
-  position: absolute;
-  top: 50%;
-  right: 6px;
-  transform: translateY(-50%);
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.pw-toggle:hover { background: #f0f0f0; color: var(--text); }
-.pw-toggle svg { width: 17px; height: 17px; }
-.pw-toggle .eye-off { display: none; }
-.pw-toggle.visible .eye-open { display: none; }
-.pw-toggle.visible .eye-off { display: block; }
-
-/* error summary (focusable, announced) */
-.error-summary {
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--error);
-  background: #fdf3f3;
-  border: 1px solid #f1c0c0;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 14px;
-}
-.error-summary.hidden { display: none; }
-.error-summary ul { margin: 4px 0 0 18px; }
-.error-summary a { color: var(--error); }
-
+/* ---------- status ---------- */
 .auth-status {
   font-size: 13px;
   margin-bottom: 12px;
@@ -212,6 +71,33 @@ body {
 .auth-status.warn { background: #fff8e1; color: #6b5200; }
 .hidden { display: none !important; }
 
+/* ---------- Google sign-in ---------- */
+.google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid #c9c9c9;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+.google-btn:hover:not(:disabled) {
+  background: #f7faff;
+  border-color: #9ab8dd;
+  box-shadow: 0 2px 6px rgba(0, 40, 90, 0.08);
+}
+.google-btn:active:not(:disabled) { background: #eef4fb; }
+.google-btn:disabled { opacity: 0.6; cursor: default; }
+.google-icon { width: 18px; height: 18px; flex: none; }
+
 /* ---------- buttons ---------- */
 .btn {
   width: 100%;
@@ -225,15 +111,8 @@ body {
   transition: background 0.15s, opacity 0.15s;
 }
 .btn:disabled { opacity: 0.6; cursor: default; }
-.btn.primary {
-  background: var(--brand);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.32);
-}
-.btn.primary:hover:not(:disabled) { background: var(--brand-dark); box-shadow: 0 3px 10px rgba(0, 120, 212, 0.38); }
-.btn.primary:active:not(:disabled) { box-shadow: 0 1px 4px rgba(0, 120, 212, 0.3); }
 /* Secondary (skip) action: outlined band so it stays obvious next to the
-   filled primary button without competing with it. */
+   Google button without competing with it. */
 .btn.secondary {
   background: #fff;
   color: var(--brand-dark);
@@ -246,8 +125,6 @@ body {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
-.mode-tab:focus-visible { outline-offset: -2px; }
-.btn.primary:focus-visible { outline-color: var(--brand-dark); }
 
 /* ---------- footnotes ---------- */
 .auth-hint {
@@ -280,18 +157,6 @@ body {
   border-top: 1px solid var(--line);
   text-align: center;
 }
-.link-btn {
-  background: none;
-  border: none;
-  color: var(--brand);
-  font-size: 12.5px;
-  font-family: inherit;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-}
-.link-btn:hover { text-decoration: underline; }
-.link-btn.small { font-size: 12px; padding: 2px 4px; white-space: nowrap; }
 
 @media (max-width: 380px) {
   .auth-card { padding: 26px 18px 18px; }

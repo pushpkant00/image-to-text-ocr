@@ -1,19 +1,17 @@
-// Client-side encryption for synced OCR history ("zero-knowledge" sync).
+// Client-side encryption for synced OCR history.
 //
-// Key hierarchy (Bitwarden-style hybrid):
-//   masterKey = PBKDF2-SHA256(password, salt, 600k iterations)   <- KEK
-//   syncKey   = random 256-bit AES-GCM data key, wrapped by masterKey
-//               and stored in Firestore (users/{uid}/profile)
-// The unwrapped syncKey is cached in chrome.storage.local per-uid so daily
-// operation never needs the password again. The password only travels to
-// Firebase Identity Toolkit (never stored); Firestore only ever sees the
-// wrapped key + ciphertext, so cloud-side readers cannot decrypt `text`.
+// Key hierarchy (Google-only sign-in):
+//   syncKey = random 256-bit AES-GCM data key, stored base64 in the account's
+//             private Firestore profile (users/{uid}/profile) and cached
+//             per-uid in chrome.storage.local. Firestore security rules keep
+//             every users/{uid} document readable only by its owner.
+// History text is encrypted with the syncKey before upload (enc:v1:), so
+// plain text never travels over the network or sits at rest in Firestore.
 
 export const ENC_PREFIX = 'enc:v1:';
 export const LOCKED_TEXT =
-  'Locked entry — could not decrypt. It may have been created with a password you changed, or the encryption key is missing on this device.';
+  'Locked entry — could not decrypt. It was encrypted with an older encryption key this device no longer has access to.';
 
-const PBKDF2_ITERATIONS = 600_000; // OWASP 2023 recommendation for PBKDF2-SHA256
 const IV_BYTES = 12; // standard AES-GCM nonce length
 const KEY_BYTES = 32; // AES-256
 
@@ -28,19 +26,6 @@ export function unb64(value: string): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
-}
-
-async function deriveKek(password: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
-  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, [
-    'deriveKey',
-  ]);
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
-    material,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt'],
-  );
 }
 
 async function aesGcmEncrypt(key: CryptoKey, data: Uint8Array<ArrayBuffer>): Promise<string> {
@@ -74,22 +59,6 @@ async function aesGcmDecrypt(key: CryptoKey, payload: string): Promise<Uint8Arra
 
 export function generateKeyBytes(): Uint8Array<ArrayBuffer> {
   return crypto.getRandomValues(new Uint8Array(KEY_BYTES));
-}
-
-/** Wrap the raw syncKey with a password-derived KEK for cloud storage. */
-export async function wrapSyncKey(syncKeyRaw: Uint8Array<ArrayBuffer>, password: string, salt: Uint8Array<ArrayBuffer>): Promise<string> {
-  const kek = await deriveKek(password, salt);
-  return aesGcmEncrypt(kek, syncKeyRaw);
-}
-
-/** Recover the raw syncKey from its cloud-wrapped form. Null = unwrap failed. */
-export async function unwrapSyncKey(
-  wrapped: string,
-  password: string,
-  salt: Uint8Array<ArrayBuffer>,
-): Promise<Uint8Array<ArrayBuffer> | null> {
-  const kek = await deriveKek(password, salt);
-  return aesGcmDecrypt(kek, wrapped);
 }
 
 export async function importSyncKey(raw: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {

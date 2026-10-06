@@ -108,12 +108,12 @@
       <div class="danger-row">
         <div>
           <div class="danger-title">Delete your account</div>
-          <p class="danger-note">Deletes your account, your synced history, and this device's history. Enter your password to confirm.</p>
+          <p class="danger-note">Deletes your account, your synced history, and this device's history. You'll re-confirm with Google, then type DELETE to confirm.</p>
         </div>
         <button id="delete-account-btn" class="btn danger-outline auto">Delete account…</button>
       </div>
       <div id="delete-confirm" class="delete-confirm hidden">
-        <input type="password" id="delete-password" placeholder="Confirm with your password" autocomplete="current-password">
+        <input type="text" id="delete-confirm-text" placeholder="Type DELETE to confirm" autocomplete="off" autocapitalize="characters" spellcheck="false">
         <div id="delete-status" class="auth-status hidden" role="status" aria-live="polite"></div>
         <div class="confirm-actions">
           <button id="delete-confirm-btn" class="btn danger auto">Delete everything</button>

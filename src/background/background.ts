@@ -1,11 +1,8 @@
 import { cleanText } from '../ocr/text-detector.js';
 import {
   getAuthState,
-  signIn,
-  signUp,
+  signInWithGoogle,
   signOut,
-  resendVerification,
-  sendPasswordReset,
   deleteAccount,
   pushEntry,
   removeEntryFromCloud,
@@ -323,28 +320,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         break;
       }
       case 'AUTH_STATE':
-        sendResponse({ ok: true, configured: isFirebaseConfigured(), user: await getAuthState() });
+        sendResponse({
+          ok: true,
+          configured: isFirebaseConfigured(),
+          googleAuth: Boolean((chrome.runtime.getManifest() as { oauth2?: { client_id?: string } }).oauth2?.client_id),
+          user: await getAuthState(),
+        });
         break;
-      case 'AUTH_SIGN_IN':
-        sendResponse({ ok: true, user: await signIn(msg.email, msg.password) });
-        break;
-      case 'AUTH_SIGN_UP':
-        sendResponse({ ok: true, user: await signUp(msg.email, msg.password) });
+      case 'AUTH_SIGN_IN_GOOGLE':
+        sendResponse({ ok: true, user: await signInWithGoogle() });
         break;
       case 'AUTH_SIGN_OUT':
         await signOut();
         sendResponse({ ok: true });
         break;
-      case 'AUTH_RESEND_VERIFY':
-        await resendVerification();
-        sendResponse({ ok: true });
-        break;
-      case 'AUTH_RESET_PASSWORD':
-        await sendPasswordReset(msg.email);
-        sendResponse({ ok: true });
-        break;
       case 'AUTH_DELETE':
-        await deleteAccount(msg.email, msg.password);
+        await deleteAccount();
         sendResponse({ ok: true, user: null });
         break;
       case 'SYNC_HISTORY':

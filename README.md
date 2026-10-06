@@ -55,15 +55,16 @@ Works on normal websites. It **cannot** run on `chrome://` pages, the new-tab pa
 
 ## Optional: login & cloud history (Firebase)
 
-History lives in `chrome.storage.local` by default. To see the same history on all your devices, sign in from the side panel — entries merge (deduped, newest 100 win) and new results upload automatically.
+History lives in `chrome.storage.local` by default. To see the same history on all your devices, sign in with Google from the side panel — entries merge (deduped, newest 100 win) and new results upload automatically.
 
 One-time setup:
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
-2. **Authentication → Sign-in method → Email/Password** → enable
+2. **Authentication → Sign-in method → Google** → enable
 3. **Firestore Database → Create database** (production mode)
-4. Project settings → **Your apps → Web app** → copy the config into `firebase-secrets.json` (start from `firebase-secrets.example.json`; the file is gitignored and injected into `dist/` at build time — without it the extension still builds, but sign-in and cloud sync stay disabled)
-5. Firestore **Rules** — only the owner can read/write their history:
+4. Project settings → **Your apps → Web app** → copy `apiKey`, `authDomain`, `projectId` into `firebase-secrets.json` (start from `firebase-secrets.example.json`; the file is gitignored and injected into `dist/` at build time — without it the extension still builds, but sign-in and cloud sync stay disabled)
+5. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) of the same project: **OAuth consent screen** → External → add your Google account under **Test users**, then **Credentials → Create credentials → OAuth client ID → Chrome extension** → paste the **Item ID** from `chrome://extensions` → copy the client ID into `firebase-secrets.json` as `googleClientId`
+6. Firestore **Rules** — only the owner can read/write their history:
 
 ```
 rules_version = '2';
@@ -76,7 +77,7 @@ service cloud.firestore {
 }
 ```
 
-6. `npm run build`, reload the extension
+7. `npm run build`, reload the extension
 
 > If your browser key has HTTP referrer restrictions, add `chrome-extension://<your-extension-id>` or use an unrestricted key for the Identity Toolkit API. Without config the extension works exactly as before — the sign-in card shows a hint instead.
 

@@ -5,8 +5,6 @@ import {
   b64,
   unb64,
   generateKeyBytes,
-  wrapSyncKey,
-  unwrapSyncKey,
   importSyncKey,
   encryptText,
   decryptText,
@@ -57,20 +55,16 @@ type FieldMap = Record<string, FirestoreValue>;
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   API_KEY_INVALID: 'Firebase is not configured correctly (bad API key).',
-  EMAIL_EXISTS: 'An account with this email already exists.',
-  EMAIL_NOT_FOUND: 'No account found with this email.',
-  USER_NOT_FOUND: 'No account found with this email.',
-  INVALID_EMAIL: 'Enter a valid email address.',
-  INVALID_PASSWORD: 'Incorrect email or password.',
-  INVALID_LOGIN_CREDENTIALS: 'Incorrect email or password.',
   INVALID_LOGIN_URL: 'Firebase is not configured correctly.',
-  MISSING_PASSWORD: 'Enter your password.',
-  MISSING_EMAIL: 'Enter your email address.',
-  WEAK_PASSWORD: 'Password must be at least 6 characters.',
-  TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many attempts. Try again later.',
-  OPERATION_NOT_ALLOWED: 'Email/password sign-in is not enabled in the Firebase console.',
+  ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL:
+    'This Google email already has an account created with a password. In the Firebase console (Authentication → Users), delete that old user, then sign in with Google again.',
+  FEDERATED_USER_ID_ALREADY_LINKED: 'This Google account is already linked to a different sign-in.',
+  INVALID_IDP_RESPONSE: 'Google sign-in failed — try again.',
+  INVALID_PROVIDER_ID: 'Google sign-in is not enabled for this Firebase project.',
+  OPERATION_NOT_ALLOWED: 'Google sign-in is not enabled in the Firebase console (Authentication → Sign-in method → Google).',
   PROJECT_DISABLED: 'This Firebase project is disabled.',
   USER_DISABLED: 'This account has been disabled.',
+  TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many attempts. Try again later.',
 };
 
 function friendlyError(raw: string): string {
@@ -180,25 +174,7 @@ async function clearSession(): Promise<void> {
 export async function getAuthState(): Promise<AuthUser | null> {
   const auth = await getSession();
   if (!auth) return null;
-  if (auth.emailVerified !== true) {
-    // Unverified — re-check with Firebase so a just-clicked link is picked up.
-    try {
-      return await refreshVerifiedFlag(auth);
-    } catch {
-      /* offline or expired — fall through to the cached value */
-    }
-  }
   return { uid: auth.uid, email: auth.email, emailVerified: auth.emailVerified === true };
-}
-
-async function refreshVerifiedFlag(auth: AuthSession): Promise<AuthUser> {
-  const idToken = await getIdToken();
-  const data = await request<{ users?: Array<{ emailVerified?: boolean }> }>(identityUrl('accounts:lookup'), {
-    body: { idToken },
-  });
-  const emailVerified = data.users?.[0]?.emailVerified === true;
-  await saveSession({ ...auth, emailVerified });
-  return { uid: auth.uid, email: auth.email, emailVerified };
 }
 
 async function getIdToken({ force = false }: { force?: boolean } = {}): Promise<string> {
@@ -247,87 +223,89 @@ async function persistAuth(data: IdentityResponse, email: string): Promise<AuthU
   return { uid: auth.uid, email: auth.email, emailVerified: auth.emailVerified };
 }
 
-async function sendVerificationEmail(idToken: string): Promise<void> {
-  await request(identityUrl('accounts:sendOobCode'), {
-    body: { requestType: 'VERIFY_EMAIL', idToken },
-  });
-}
-
 /** Local key recording which account last owned this device's history. */
 const LAST_ACCOUNT_KEY = 'lastAccountUid';
 
-export async function signIn(email: string, password: string): Promise<AuthUser> {
-  requireConfigured();
-  await assertNotLocked();
+/** Ask Chrome for a Google OAuth access token (opens the Google account picker). */
+async function getGoogleAccessToken(): Promise<string> {
+  if (typeof chrome.identity?.getAuthToken !== 'function') {
+    throw new Error('Google sign-in is unavailable — reload the extension (the "identity" permission may be missing).');
+  }
+  let token: string;
+  try {
+    const res = (await chrome.identity.getAuthToken({ interactive: true })) as { token?: string } | string;
+    token = typeof res === 'string' ? res : res?.token || '';
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/oauth|client.?id|manifest/i.test(message)) {
+      throw new Error('Google sign-in is not configured — add googleClientId to firebase-secrets.json and rebuild.');
+    }
+    throw new Error('Google sign-in was cancelled or failed — try again.');
+  }
+  if (!token) throw new Error('Google sign-in returned no token — try again.');
+  return token;
+}
+
+/** Drop this extension's cached Google token so the next sign-in shows the account picker. */
+async function dropGoogleToken(): Promise<void> {
+  try {
+    const res = (await chrome.identity.getAuthToken({ interactive: false })) as { token?: string } | string;
+    const token = typeof res === 'string' ? res : res?.token;
+    if (token) await chrome.identity.removeCachedAuthToken({ token });
+  } catch {
+    /* no cached token */
+  }
+}
+
+/** Exchange the Google access token for a Firebase session (sign-in or first-time link). */
+async function signInWithGoogleIdp(): Promise<IdentityResponse> {
+  const accessToken = await getGoogleAccessToken();
   let data: IdentityResponse;
   try {
-    data = await request<IdentityResponse>(identityUrl('accounts:signInWithPassword'), {
-      body: { email, password, returnSecureToken: true },
+    data = await request<IdentityResponse>(identityUrl('accounts:signInWithIdp'), {
+      body: {
+        postBody: `access_token=${accessToken}&providerId=google.com`,
+        requestUri: 'http://localhost',
+        returnSecureToken: true,
+      },
     });
   } catch (err) {
     if (!isNetworkError(err)) await recordFailure();
     throw err;
   }
   await clearFailures();
-  const user = await persistAuth(data, email);
+  if (!data.localId || !data.refreshToken) throw new Error('Google sign-in failed — try again.');
+  return data;
+}
+
+export async function signInWithGoogle(): Promise<AuthUser> {
+  requireConfigured();
+  await assertNotLocked();
+  const data = await signInWithGoogleIdp();
+  const user = await persistAuth(data, data.email || '');
   // Account switch on this device → the previous account's history must not
-  // show (or sync) under the new account. Same account / first sign-in keeps
-  // the device history so a re-login can merge it back with the cloud copy.
+  // show (or sync) under the new account. Same account keeps the device
+  // history so it can be merged back with the cloud copy on sync.
   const { lastAccountUid = null } = await chrome.storage.local.get<LocalStorage>(LAST_ACCOUNT_KEY);
   if (lastAccountUid && lastAccountUid !== user.uid) await chrome.storage.local.set({ history: [] });
   await chrome.storage.local.set({ [LAST_ACCOUNT_KEY]: user.uid });
-  await ensureSyncKey(password); // throw → sign-in reports the setup failure
+  await ensureSyncKey(); // throw → sign-in reports the setup failure
   return user;
 }
 
-export async function signUp(email: string, password: string): Promise<AuthUser> {
+export async function deleteAccount(): Promise<void> {
   requireConfigured();
+  const auth = await getSession();
+  if (!auth) throw new Error('Not signed in.');
   await assertNotLocked();
-  const data = await request<IdentityResponse>(identityUrl('accounts:signUp'), {
-    body: { email, password, returnSecureToken: true },
-  });
-  const user = await persistAuth(data, email);
-  // A brand-new account always starts with a clean device history so it never
-  // inherits another account's OCR results.
-  await chrome.storage.local.set({ history: [], [LAST_ACCOUNT_KEY]: user.uid });
-  // Best-effort: the resend button is available if this fails.
-  if (data.idToken) await sendVerificationEmail(data.idToken).catch(() => {});
-  await ensureSyncKey(password);
-  return user;
-}
-
-export async function resendVerification(): Promise<void> {
-  requireConfigured();
-  const idToken = await getIdToken();
-  await sendVerificationEmail(idToken);
-}
-
-export async function sendPasswordReset(email: string): Promise<void> {
-  requireConfigured();
-  await request(identityUrl('accounts:sendOobCode'), {
-    body: { requestType: 'PASSWORD_RESET', email },
-  });
-}
-
-export async function deleteAccount(email: string, password: string): Promise<void> {
-  requireConfigured();
-  await assertNotLocked();
-  // Re-authenticate so the caller must prove ownership of the account.
-  let idToken: string | undefined;
-  try {
-    const data = await request<IdentityResponse>(identityUrl('accounts:signInWithPassword'), {
-      body: { email, password, returnSecureToken: true },
-    });
-    idToken = data.idToken;
-  } catch (err) {
-    if (!isNetworkError(err)) await recordFailure();
-    throw err;
-  }
-  await clearFailures();
+  // Fresh Google sign-in so deletion satisfies Firebase's "recent login" check.
+  const data = await signInWithGoogleIdp();
+  if (!data.idToken) throw new Error('Could not re-authenticate — try again.');
   // Best-effort cloud wipe while the fresh token is valid, then delete the
   // account itself (which also invalidates the tokens).
   await clearCloudHistory().catch(() => {});
-  await request(identityUrl('accounts:delete'), { body: { idToken } });
+  await request(identityUrl('accounts:delete'), { body: { idToken: data.idToken } });
+  await dropGoogleToken();
   await clearSession();
   await chrome.storage.local.remove(['history', 'syncKeys', LAST_ACCOUNT_KEY]);
 }
@@ -335,8 +313,9 @@ export async function deleteAccount(email: string, password: string): Promise<vo
 export async function signOut(): Promise<void> {
   const auth = await getSession();
   await clearSession();
-  // Drop this device's cached sync key — it is re-derived from the password
-  // on the next sign-in, so a signed-out profile cannot decrypt cloud data.
+  await dropGoogleToken();
+  // Drop this device's cached sync key — it is re-fetched from the account
+  // profile on the next sign-in, so a signed-out profile cannot decrypt cloud data.
   // Remember which account this device belonged to so the next account that
   // signs in can be detected as a switch (history is wiped) vs the same
   // account re-logging in (history is kept and re-merged on sync).
@@ -351,8 +330,11 @@ export async function signOut(): Promise<void> {
 const SYNC_KEYS_LOCAL = 'syncKeys';
 
 interface SyncProfile {
-  salt: string; // base64 (32 random bytes)
-  wrappedKey: string; // base64(iv‖ct) — syncKey wrapped with PBKDF2(password, salt)
+  /** Raw base64 syncKey — readable only by the signed-in owner (Firestore rules). */
+  syncKey?: string;
+  /** Legacy password-wrapped form (pre-Google accounts). */
+  salt?: string;
+  wrappedKey?: string;
   v?: number;
 }
 
@@ -362,6 +344,14 @@ function profileDocUrl(uid: string): string {
   return `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/users/${uid}/profile/main`;
 }
 
+function profileFields(profile: SyncProfile): FieldMap {
+  const obj: Record<string, JsonValue | undefined> = { v: profile.v || 1 };
+  if (profile.syncKey) obj.syncKey = profile.syncKey;
+  if (profile.salt) obj.salt = profile.salt;
+  if (profile.wrappedKey) obj.wrappedKey = profile.wrappedKey;
+  return toFields(obj);
+}
+
 async function getProfile(uid: string): Promise<SyncProfile | null> {
   const token = await getIdToken();
   const res = await fetch(profileDocUrl(uid), { headers: { Authorization: `Bearer ${token}` } });
@@ -369,8 +359,13 @@ async function getProfile(uid: string): Promise<SyncProfile | null> {
   if (!res.ok) throw await firestoreError(res);
   const doc = (await res.json().catch(() => null)) as FirestoreDoc | null;
   const fields = fromFields(doc?.fields);
-  if (typeof fields.salt !== 'string' || typeof fields.wrappedKey !== 'string') return null;
-  return { salt: fields.salt, wrappedKey: fields.wrappedKey, v: Number(fields.v) || 1 };
+  const profile: SyncProfile = {};
+  if (typeof fields.syncKey === 'string') profile.syncKey = fields.syncKey;
+  if (typeof fields.salt === 'string') profile.salt = fields.salt;
+  if (typeof fields.wrappedKey === 'string') profile.wrappedKey = fields.wrappedKey;
+  if (fields.v !== undefined) profile.v = Number(fields.v) || 1;
+  if (!profile.syncKey && !profile.wrappedKey) return null;
+  return profile;
 }
 
 async function createProfileIfMissing(uid: string, profile: SyncProfile): Promise<boolean> {
@@ -378,9 +373,7 @@ async function createProfileIfMissing(uid: string, profile: SyncProfile): Promis
   const res = await fetch(`${profileDocUrl(uid)}?currentDocument.exists=false`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      fields: toFields({ salt: profile.salt, wrappedKey: profile.wrappedKey, v: profile.v || 1 }),
-    }),
+    body: JSON.stringify({ fields: profileFields(profile) }),
   });
   if (res.status === 409) return false; // another device created it first
   if (!res.ok) throw await firestoreError(res);
@@ -392,9 +385,7 @@ async function updateProfile(uid: string, profile: SyncProfile): Promise<void> {
   const res = await fetch(profileDocUrl(uid), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      fields: toFields({ salt: profile.salt, wrappedKey: profile.wrappedKey, v: profile.v || 1 }),
-    }),
+    body: JSON.stringify({ fields: profileFields(profile) }),
   });
   if (!res.ok) throw await firestoreError(res);
 }
@@ -416,45 +407,53 @@ async function getSyncKey(): Promise<CryptoKey | null> {
 }
 
 /**
- * Make sure this device holds the account's syncKey. Called on every
- * sign-in/sign-up with the password (the only moment it is available).
- * - No cloud profile yet → generate a key, wrap it, create the profile.
- * - Profile exists → unwrap it (normal path).
- * - Unwrap fails → password was changed: re-wrap this device's cached key if
- *   we have one, otherwise start a fresh key (older ciphertext becomes
- *   permanently locked, shown as LOCKED_TEXT).
+ * Make sure this device holds the account's syncKey.
+ * - Profile has a raw syncKey → cache it locally (normal path).
+ * - Device has a cached key but no cloud key yet → publish it.
+ * - Nothing anywhere → generate a fresh key and store it in the profile.
+ * - Legacy password-wrapped profile → rotate to a raw key (the password is
+ *   gone after the Google migration; old ciphertext becomes LOCKED_TEXT).
  */
-async function ensureSyncKey(password: string): Promise<void> {
+async function ensureSyncKey(): Promise<void> {
   const auth = await getSession();
   if (!auth) return;
   const { [SYNC_KEYS_LOCAL]: keys = {} } = await chrome.storage.local.get<Record<string, Record<string, string>>>(
     SYNC_KEYS_LOCAL,
   );
   const cached = keys[auth.uid];
+  const cache = (value: string): Promise<void> =>
+    chrome.storage.local.set({ [SYNC_KEYS_LOCAL]: { ...keys, [auth.uid]: value } });
 
-  let profile = await getProfile(auth.uid);
-  const salt = profile ? unb64(profile.salt) : crypto.getRandomValues(new Uint8Array(32));
-  let raw: Uint8Array<ArrayBuffer> | null = profile ? await unwrapSyncKey(profile.wrappedKey, password, salt) : null;
+  const profile = await getProfile(auth.uid);
 
-  if (!raw) {
-    if (profile) {
-      raw = cached ? unb64(cached) : generateKeyBytes();
-      await updateProfile(auth.uid, { ...profile, wrappedKey: await wrapSyncKey(raw, password, salt) });
-    } else {
-      raw = generateKeyBytes();
-      const wrappedKey = await wrapSyncKey(raw, password, salt);
-      const created = await createProfileIfMissing(auth.uid, { salt: b64(salt), wrappedKey, v: 1 });
-      if (!created) {
-        // Lost a create race with another device — adopt its key.
-        profile = await getProfile(auth.uid);
-        raw = profile ? await unwrapSyncKey(profile.wrappedKey, password, unb64(profile.salt)) : null;
-        if (!raw) throw new Error('Could not set up sync encryption — try signing in again.');
-      }
-    }
+  if (profile?.syncKey) {
+    if (cached !== profile.syncKey) await cache(profile.syncKey);
+    return;
   }
 
-  if (!raw) throw new Error('Could not set up sync encryption — try signing in again.');
-  await chrome.storage.local.set({ [SYNC_KEYS_LOCAL]: { ...keys, [auth.uid]: b64(raw) } });
+  if (cached) {
+    // This device already has a key — publish it to the profile.
+    if (profile) await updateProfile(auth.uid, { ...profile, syncKey: cached, v: 2 });
+    else if (!(await createProfileIfMissing(auth.uid, { syncKey: cached, v: 1 }))) {
+      const again = await getProfile(auth.uid);
+      if (again?.syncKey) await cache(again.syncKey);
+      else if (again) await updateProfile(auth.uid, { ...again, syncKey: cached, v: 2 });
+    }
+    return;
+  }
+
+  // Nothing cached and nothing usable in the cloud — start fresh.
+  const syncKey = b64(generateKeyBytes());
+  if (profile) {
+    await updateProfile(auth.uid, { ...profile, syncKey, v: 2 });
+  } else if (!(await createProfileIfMissing(auth.uid, { syncKey, v: 1 }))) {
+    // Lost a create race with another device — adopt its key.
+    const again = await getProfile(auth.uid);
+    if (!again?.syncKey) throw new Error('Could not set up sync encryption — try signing in again.');
+    await cache(again.syncKey);
+    return;
+  }
+  await cache(syncKey);
 }
 
 // ---------- firestore (REST) ----------
@@ -666,7 +665,6 @@ export async function pushEntry(entry: OCRHistoryEntry): Promise<void> {
   if (!entry?.text) return;
   const auth = await getSession();
   if (!auth) return; // signed out — local history only
-  if (auth.emailVerified !== true) return; // silent — UI shows the verify banner
   await putEntries([entry]);
 }
 
@@ -687,8 +685,11 @@ export async function syncHistory(): Promise<SyncStats> {
   requireConfigured();
   const auth = await getSession();
   if (!auth) throw new Error('Not signed in.');
-  if (auth.emailVerified !== true) throw new Error('Verify your email address to enable sync.');
-  if (!(await getSyncKey())) throw new Error('Sync encryption key unavailable — sign out and sign in again to restore it.');
+  if (!(await getSyncKey())) {
+    // First sync after sign-in / a legacy profile — (re)create or fetch the key.
+    await ensureSyncKey();
+    if (!(await getSyncKey())) throw new Error('Sync encryption key unavailable — sign out and sign in again to restore it.');
+  }
 
   const { entries: cloud, legacyIds } = await listHistoryCloud();
   const { history: local = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });

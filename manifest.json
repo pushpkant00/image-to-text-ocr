@@ -4,7 +4,14 @@
   "name": "Image to Text OCR",
   "version": "1.0.0",
   "description": "Extract text from images using on-device OCR. Right-click any image or select a region to copy text instantly.",
-  "permissions": ["activeTab", "contextMenus", "storage", "offscreen", "scripting", "sidePanel", "notifications"],
+  "permissions": ["activeTab", "contextMenus", "storage", "offscreen", "scripting", "sidePanel", "notifications", "identity"],
+  "identity": {
+    "scopes": [
+      "openid",
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+  },
   "host_permissions": ["http://*/*", "https://*/*", "file:///*"],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
