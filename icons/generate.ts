@@ -1,33 +1,22 @@
-import { createCanvas, loadImage } from 'canvas';
-import { writeFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { basename, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 
 const iconsDir = dirname(fileURLToPath(import.meta.url));
 const source = join(iconsDir, 'source-icon.png');
+const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
 
-async function generateIcon(size: number): Promise<void> {
-  const image = await loadImage(source);
-  const canvas = createCanvas(size, size);
-  const ctx = canvas.getContext('2d');
+const jobs: Array<[string, number]> = [
+  [join(iconsDir, 'icon16.png'), 16],
+  [join(iconsDir, 'icon48.png'), 48],
+  [join(iconsDir, 'icon128.png'), 128],
+  [join(iconsDir, '..', 'docs', 'assets', 'icon.png'), 128],
+];
 
-  const side = Math.max(image.width, image.height);
-  const scale = size / side;
-
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(
-    image,
-    (size - image.width * scale) / 2,
-    (size - image.height * scale) / 2,
-    image.width * scale,
-    image.height * scale
-  );
-
-  writeFileSync(join(iconsDir, `icon${size}.png`), canvas.toBuffer('image/png'));
+for (const [out, size] of jobs) {
+  await sharp(source)
+    .resize(size, size, { fit: 'contain', position: 'centre', background: transparent })
+    .png()
+    .toFile(out);
 }
-
-const sizes = [16, 48, 128];
-for (const size of sizes) {
-  await generateIcon(size);
-}
-console.log(`Icons generated: ${sizes.join(', ')}`);
+console.log(`Icons generated: ${jobs.map(([out]) => basename(out)).join(', ')}`);
