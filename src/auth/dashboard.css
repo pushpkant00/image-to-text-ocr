@@ -212,6 +212,7 @@ body {
 .auth-status.warn { background: #fff8e1; color: #6b5200; }
 
 /* ---------- history ---------- */
+#backup-warn { margin-top: 10px; }
 .filters {
   display: flex;
   gap: 10px;

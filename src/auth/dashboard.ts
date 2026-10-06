@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // history
   const stats = q<HTMLSpanElement>('stats');
+  const backupWarn = q<HTMLDivElement>('backup-warn');
   const searchInput = q<HTMLInputElement>('search-input');
   const filterLanguage = q<HTMLSelectElement>('filter-language');
   const clearHistoryBtn = q<HTMLButtonElement>('clear-history-btn');
@@ -102,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     verifyPill.classList.toggle('warn', !verified);
     verifyPill.textContent = 'Email unverified';
     verifyBanner.classList.toggle('hidden', verified);
+    backupWarn.classList.toggle('hidden', verified);
     syncBtn.disabled = busy || !verified;
     return user;
   }
@@ -115,7 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
         `Synced · ${total} item${total === 1 ? '' : 's'}${uploaded ? ` · ${uploaded} uploaded` : ''}`,
         'success',
       );
-    } else if (!res?.ok && showStatus) {
+    } else if (!res?.ok) {
+      // errors always surface — a silent failed sync looks like lost history
       setStatus(syncStatus, res?.error || 'Sync failed', 'error');
     }
     if (res?.ok) await loadHistory();
@@ -345,6 +348,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = await refreshAccount();
     if (!user) return;
     await loadHistory();
-    if (user.emailVerified) syncNow(false).catch(() => {});
+    if (user.emailVerified) {
+      syncNow(false).catch((err: unknown) =>
+        setStatus(syncStatus, err instanceof Error ? err.message : 'Sync failed', 'error'),
+      );
+    } else {
+      setStatus(syncStatus, 'Sync is off until your email is verified — history stays only on this device.', 'warn');
+    }
   })();
 });
