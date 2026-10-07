@@ -3,5 +3,7 @@ dist/
 libs/
 firebase-secrets.json
 *.log
+*.pem
+*.crx
 .DS_Store
 Thumbs.db
