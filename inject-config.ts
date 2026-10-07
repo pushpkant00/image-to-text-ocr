@@ -61,6 +61,10 @@ if (secrets.googleClientId) {
       'openid',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile',
+      // email OTP: sendOobCode with returnOobLink (issue the oobCode locally)
+      'https://www.googleapis.com/auth/identitytoolkit',
+      // email OTP: send the 6-digit code from the user's own Gmail
+      'https://www.googleapis.com/auth/gmail.send',
     ],
   };
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');

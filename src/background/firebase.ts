@@ -67,16 +67,20 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many attempts. Try again later.',
 };
 
-/** Error table for the email sign-in link flow (same codes, other wording). */
+/** Error table for the email OTP login flow (same codes, other wording). */
 const EMAIL_ERROR_MESSAGES: Record<string, string> = {
   ...AUTH_ERROR_MESSAGES,
   OPERATION_NOT_ALLOWED:
     'Email login is not enabled — in the Firebase console open Authentication → Sign-in method and enable Email/Password.',
-  INVALID_OOB_CODE: 'That login link is invalid or was already used — send a new one.',
-  EXPIRED_OOB_CODE: 'That login link has expired — send a new one.',
+  INSUFFICIENT_PERMISSION:
+    'Your Google account does not have permission for this Firebase project — sign in to Chrome with the project owner\'s Google account.',
+  PERMISSION_DENIED:
+    'Your Google account does not have permission for this Firebase project — sign in to Chrome with the project owner\'s Google account.',
+  INVALID_OOB_CODE: 'That code is invalid or was already used — request a new one.',
+  EXPIRED_OOB_CODE: 'That code has expired — request a new one.',
   INVALID_EMAIL: 'Enter a valid email address.',
   MISSING_EMAIL: 'Enter a valid email address.',
-  USER_NOT_FOUND: 'No account for that email yet — send the link again and wait a moment.',
+  USER_NOT_FOUND: 'That code is invalid — request a new one.',
 };
 
 function friendlyError(raw: string, kind: 'google' | 'email' = 'google'): string {
@@ -144,7 +148,7 @@ interface RequestOptions {
   body?: Record<string, unknown>;
   form?: boolean;
   headers?: Record<string, string>;
-  /** Which error-message table to use — Google sign-in vs email link login. */
+  /** Which error-message table to use — Google sign-in vs email OTP login. */
   kind?: 'google' | 'email';
 }
 
@@ -315,10 +319,29 @@ async function finishSignIn(data: IdentityResponse, email: string): Promise<Auth
   return user;
 }
 
-// ---------- email sign-in link (passwordless, like a one-time login code) ----------
+// ---------- email OTP login (6-digit code, sent from the user's own Gmail) ----------
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_KEY = 'otpPending';
+const OTP_TTL_MS = 10 * 60_000;
+const OTP_RESEND_MS = 30_000;
+const OTP_MAX_ATTEMPTS = 5;
 
-/** Pull the oobCode out of a pasted Firebase action link (or accept a bare code). */
+interface OtpPending {
+  email: string;
+  code: string;
+  oobCode: string;
+  expiresAt: number;
+  attempts: number;
+  resendAt: number;
+}
+
+export interface SendOtpResult {
+  resendAt: number;
+  expiresAt: number;
+  alreadySent?: boolean;
+}
+
+/** Pull the oobCode out of a Firebase action link (returnOobLink response fallback). */
 function extractOobCode(pasted: string): string {
   const value = String(pasted || '')
     .trim()
@@ -336,31 +359,190 @@ function extractOobCode(pasted: string): string {
   return /^[A-Za-z0-9_-]{10,}$/.test(value) ? value : '';
 }
 
-/** Send the passwordless email sign-in link (Firebase EMAIL_SIGNIN out-of-band code). */
-export async function sendLoginEmail(email: string): Promise<void> {
+function randomOtp(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  let out = '';
+  for (const b of bytes) out += String(b % 10);
+  return out;
+}
+
+async function getPendingOtp(): Promise<OtpPending | undefined> {
+  const { [OTP_KEY]: pending } = await chrome.storage.session.get<Record<typeof OTP_KEY, OtpPending | undefined>>(
+    OTP_KEY,
+  );
+  return pending;
+}
+
+async function setPendingOtp(pending: OtpPending): Promise<void> {
+  await chrome.storage.session.set({ [OTP_KEY]: pending });
+}
+
+async function dropPendingOtp(): Promise<void> {
+  await chrome.storage.session.remove(OTP_KEY);
+}
+
+/** Google OAuth token with the identitytoolkit + gmail.send scopes (OTP-flavoured errors). */
+async function getIdentityOauthToken(): Promise<string> {
+  if (typeof chrome.identity?.getAuthToken !== 'function') {
+    throw new Error('Email codes need the "identity" permission — reload the extension.');
+  }
+  let res: { token?: string } | string;
+  try {
+    res = (await chrome.identity.getAuthToken({ interactive: true })) as { token?: string } | string;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/consent|permission|scope/i.test(message)) {
+      throw new Error('Approve the permission prompt for this extension (reload it if the prompt keeps appearing), then try again.');
+    }
+    if (/oauth|client.?id|manifest/i.test(message)) {
+      throw new Error('Email codes are not configured — add googleClientId to firebase-secrets.json and rebuild.');
+    }
+    throw new Error('Could not get Google access — try again.');
+  }
+  const token = typeof res === 'string' ? res : res?.token || '';
+  if (!token) throw new Error('Chrome returned no access token — try again.');
+  return token;
+}
+
+/** Send the 6-digit code through the Gmail API (the user's own Gmail account is the sender). */
+async function sendOtpMail(to: string, code: string, token: string): Promise<void> {
+  const mime = [
+    `To: ${to}`,
+    'Subject: Your Image to Text OCR login code',
+    'Content-Type: text/plain; charset=UTF-8',
+    '',
+    `Your login code is: ${code}`,
+    '',
+    'It expires in 10 minutes. If you did not request this, you can ignore this email.',
+  ].join('\r\n');
+  const bytes = new TextEncoder().encode(mime);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  const raw = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  let res: Response;
+  try {
+    res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw }),
+    });
+  } catch {
+    throw networkError();
+  }
+  if (res.ok) return;
+  const data = (await res.json().catch(() => null)) as {
+    error?: { message?: string; status?: string; details?: { reason?: string }[] } | null;
+  } | null;
+  const message = data?.error?.message || '';
+  const reasons = data?.error?.details?.map((d) => d?.reason) || [];
+  if (res.status === 401) throw new Error('Chrome access expired — reload the extension and try again.');
+  if (reasons.includes('SERVICE_DISABLED') || /has not been used in|is disabled/i.test(message)) {
+    throw new Error(
+      `Enable the Gmail API for this Firebase project, then reload the extension: https://console.developers.google.com/apis/api/gmail.googleapis.com/project?project=${FIREBASE_CONFIG.projectId}`,
+    );
+  }
+  if (res.status === 403) {
+    throw new Error('This Google account cannot send the code email — sign in to Chrome with a Gmail account and check that the Gmail API is enabled.');
+  }
+  throw new Error(`Could not send the code email (${res.status}).`);
+}
+
+/**
+ * Issue a fresh Firebase EMAIL_SIGNIN oobCode (returned locally via returnOobLink,
+ * so Firebase sends nothing) and email the generated 6-digit code via the Gmail API.
+ */
+export async function sendLoginOtp(email: string): Promise<SendOtpResult> {
   requireConfigured();
   await assertNotLocked();
   const addr = String(email || '').trim();
   if (!EMAIL_RE.test(addr) || addr.length >= 256) throw new Error('Enter a valid email address.');
-  await request(identityUrl('accounts:sendOobCode'), {
-    kind: 'email',
-    body: { requestType: 'EMAIL_SIGNIN', email: addr, canHandleCodeInApp: true },
-  });
+
+  const pending = await getPendingOtp();
+  const now = Date.now();
+  if (pending && pending.expiresAt > now && pending.resendAt > now) {
+    if (pending.email.toLowerCase() === addr.toLowerCase()) {
+      return { resendAt: pending.resendAt, expiresAt: pending.expiresAt, alreadySent: true };
+    }
+    throw new Error(`Wait ${Math.ceil((pending.resendAt - now) / 1000)}s before requesting another code.`);
+  }
+
+  let token = await getIdentityOauthToken();
+  const issueOob = (accessToken: string): Promise<{ oobCode?: string; oobLink?: string }> =>
+    request<{ oobCode?: string; oobLink?: string }>(identityUrl('accounts:sendOobCode'), {
+      kind: 'email',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: { requestType: 'EMAIL_SIGNIN', email: addr, returnOobLink: true, canHandleCodeInApp: true },
+    });
+
+  let oob: { oobCode?: string; oobLink?: string };
+  try {
+    oob = await issueOob(token);
+  } catch (err) {
+    // A cached token granted before the OTP scopes were added → drop it so Chrome re-consents.
+    if (!(err instanceof Error) || !/permission|insufficient|scope/i.test(err.message)) throw err;
+    await dropGoogleToken();
+    token = await getIdentityOauthToken();
+    oob = await issueOob(token);
+  }
+  const oobCode = oob.oobCode || extractOobCode(oob.oobLink || '');
+  if (!oobCode) throw new Error('Could not create a login code — try again.');
+
+  const next: OtpPending = {
+    email: addr,
+    code: randomOtp(),
+    oobCode,
+    expiresAt: now + OTP_TTL_MS,
+    attempts: 0,
+    resendAt: now + OTP_RESEND_MS,
+  };
+  await setPendingOtp(next);
+  try {
+    await sendOtpMail(addr, next.code, token);
+  } catch (err) {
+    await dropPendingOtp();
+    throw err;
+  }
+  return { resendAt: next.resendAt, expiresAt: next.expiresAt };
 }
 
-/** Complete the email login: paste the emailed link (or the bare oobCode). */
-export async function loginWithEmail(email: string, pasted: string): Promise<AuthUser> {
+/** Verify the 6-digit code and redeem the stored oobCode to sign in. */
+export async function verifyLoginOtp(email: string, code: string): Promise<AuthUser> {
   requireConfigured();
   await assertNotLocked();
   const addr = String(email || '').trim();
   if (!EMAIL_RE.test(addr)) throw new Error('Enter a valid email address.');
-  const oobCode = extractOobCode(pasted);
-  if (!oobCode) throw new Error('Paste the login link (or the code) from your email.');
+  const entered = String(code || '').replace(/\D/g, '');
+
+  const pending = await getPendingOtp();
+  if (!pending || pending.email.toLowerCase() !== addr.toLowerCase()) throw new Error('Request a new code first.');
+  if (Date.now() > pending.expiresAt) {
+    await dropPendingOtp();
+    throw new Error('That code has expired — request a new one.');
+  }
+  if (pending.attempts >= OTP_MAX_ATTEMPTS) {
+    await dropPendingOtp();
+    throw new Error('Too many wrong tries — request a new code.');
+  }
+  if (entered.length !== 6 || entered !== pending.code) {
+    pending.attempts += 1;
+    await setPendingOtp(pending);
+    await recordFailure();
+    const left = OTP_MAX_ATTEMPTS - pending.attempts;
+    throw new Error(
+      left > 0
+        ? `That code is not correct — ${left} ${left === 1 ? 'attempt' : 'attempts'} left.`
+        : 'Too many wrong tries — request a new code.',
+    );
+  }
+
+  await dropPendingOtp();
+  await clearFailures();
   let data: IdentityResponse;
   try {
     data = await request<IdentityResponse>(identityUrl('accounts:signInWithEmailLink'), {
       kind: 'email',
-      body: { email: addr, oobCode },
+      body: { email: addr, oobCode: pending.oobCode },
     });
   } catch (err) {
     if (!isNetworkError(err)) await recordFailure();
@@ -405,7 +587,7 @@ export async function deleteAccount(): Promise<void> {
   } catch (err) {
     if (err instanceof Error && err.message === AUTH_ERROR_MESSAGES.ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL) {
       throw new Error(
-        'This account logs in with email, so Google cannot re-confirm it. Log out, log back in with your email link, and delete the account within a minute of logging in — or delete the user in the Firebase console (Authentication → Users).',
+        'This account logs in with email, so Google cannot re-confirm it. Log out, log back in with your email code, and delete the account within a minute of logging in — or delete the user in the Firebase console (Authentication → Users).',
       );
     }
     throw err;

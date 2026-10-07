@@ -78,8 +78,9 @@
 }
 .login-close:hover { background: #f0f0f0; color: var(--text); }
 
-/* ---------- brand ---------- */
-.login-brand { text-align: center; margin-bottom: 20px; }
+/* ---------- brand (step 1) + verify head (step 2) ---------- */
+.login-brand,
+.login-head2 { text-align: center; margin-bottom: 20px; }
 .login-icon {
   display: block;
   margin: 0 auto 10px;
@@ -89,8 +90,39 @@
   border: 1px solid #d7e7f9;
   box-shadow: 0 3px 10px rgba(0, 120, 212, 0.16);
 }
+.login-otp-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #f2f8ff, #e3eefb);
+  border: 1px solid #d7e7f9;
+  color: var(--brand);
+  box-shadow: 0 3px 10px rgba(0, 120, 212, 0.16);
+}
 .login-title { font-size: 20px; font-weight: 650; letter-spacing: -0.2px; }
 .login-sub { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+.login-email-echo { color: var(--text); font-weight: 600; word-break: break-all; }
+.login-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 2px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+  vertical-align: -4px;
+  transition: background 0.15s;
+}
+.login-edit:hover { background: #eef5fb; }
 
 /* ---------- status ---------- */
 .login-status {
@@ -195,20 +227,18 @@
 .login-primary:hover:not(:disabled) { background: var(--brand-dark); }
 .login-primary:disabled { opacity: 0.6; cursor: default; }
 
-.login-email-hint {
-  font-size: 12.5px;
-  color: var(--muted);
-  line-height: 1.5;
+/* ---------- OTP step (step 2) ---------- */
+.login-otp-input {
   text-align: center;
-  margin-bottom: 9px;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em; /* cancels the trailing letter-spacing so digits stay centred */
+  font-size: 21px;
+  font-weight: 650;
+  padding: 12px 10px;
 }
-.login-email-hint b { color: var(--text); font-weight: 600; word-break: break-all; }
-
-.login-step-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 6px;
+.login-otp-step .login-resend {
+  display: block;
+  margin: 8px auto 0;
 }
 .login-link {
   padding: 4px 6px;
@@ -216,7 +246,7 @@
   border-radius: 4px;
   background: none;
   color: var(--brand-dark);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
@@ -226,7 +256,8 @@
 .login-link:disabled { opacity: 0.6; cursor: default; }
 
 /* ---------- footnotes ---------- */
-.login-hint {
+.login-hint,
+.login-agree {
   font-size: 11.5px;
   color: var(--muted);
   line-height: 1.5;
