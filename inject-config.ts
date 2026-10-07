@@ -47,7 +47,7 @@ if (empty > 0 || out.includes('__FIREBASE_')) {
   console.log('[config] Firebase config injected -> dist/shared/firebase-config.js');
 }
 
-// Google OAuth client id -> dist/manifest.json identity.oauth2 (chrome.identity.getAuthToken).
+// Google OAuth client id + scopes -> dist/manifest.json oauth2 (chrome.identity.getAuthToken).
 const manifestPath = join(root, 'dist', 'manifest.json');
 if (secrets.googleClientId) {
   if (!existsSync(manifestPath)) {
@@ -55,10 +55,16 @@ if (secrets.googleClientId) {
     process.exit(1);
   }
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
-  const identity = (manifest.identity as Record<string, unknown> | undefined) || {};
-  manifest.identity = { ...identity, oauth2: { client_id: secrets.googleClientId } };
+  manifest.oauth2 = {
+    client_id: secrets.googleClientId,
+    scopes: [
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ],
+  };
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
-  console.log('[config] Google OAuth client id injected -> dist/manifest.json');
+  console.log('[config] Google OAuth config injected -> dist/manifest.json');
 } else {
   console.warn('[config] googleClientId missing in firebase-secrets.json — "Continue with Google" will report a setup error.');
 }
