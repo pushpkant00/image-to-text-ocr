@@ -15,7 +15,7 @@
         <span class="brand-tag">Dashboard</span>
       </div>
       <nav class="topnav" aria-label="Dashboard menu">
-        <a href="dashboard.html" class="topnav-link active" aria-current="page">Account</a>
+        <a href="dashboard.html" class="topnav-link active" aria-current="page">History</a>
         <a href="settings.html" class="topnav-link">Settings</a>
       </nav>
       <div class="user-menu">
@@ -27,21 +27,10 @@
   </header>
 
   <main class="dash">
-    <section class="panel">
-      <div class="panel-head">
-        <div class="panel-title">
-          <span class="panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.47-2.98 7.69-7 9-4.02-1.31-7-4.53-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
-          <h2>Account &amp; sync</h2>
-        </div>
-      </div>
-      <div class="sync-row">
-        <div class="sync-info">
-          <div id="sync-status" class="auth-status hidden" role="status" aria-live="polite"></div>
-          <p class="sync-note">History lives on this device. Sync merges it with your other devices — text is encrypted before upload and only your signed-in account can read it.</p>
-        </div>
-        <button id="sync-btn" class="btn primary auto">Sync Now</button>
-      </div>
-    </section>
+    <div id="sync-error" class="sync-error hidden" role="alert">
+      <span id="sync-error-text" class="sync-error-text"></span>
+      <button id="sync-retry-btn" class="btn danger-outline auto">Retry sync</button>
+    </div>
 
     <section class="panel">
       <div class="panel-head">

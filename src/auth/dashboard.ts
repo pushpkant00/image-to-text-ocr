@@ -3,7 +3,6 @@ interface RuntimeResponse {
   error?: string;
   user?: AuthUser | null;
   configured?: boolean;
-  stats?: SyncStats;
   history?: OCRHistoryEntry[];
 }
 
@@ -19,9 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const userEmail = q<HTMLSpanElement>('user-email');
   const signOutBtn = q<HTMLButtonElement>('sign-out-btn');
 
-  // account & sync
-  const syncStatus = q<HTMLDivElement>('sync-status');
-  const syncBtn = q<HTMLButtonElement>('sync-btn');
+  // sync (silent — only errors surface)
+  const syncError = q<HTMLDivElement>('sync-error');
+  const syncErrorText = q<HTMLSpanElement>('sync-error-text');
+  const syncRetryBtn = q<HTMLButtonElement>('sync-retry-btn');
 
   // history
   const stats = q<HTMLSpanElement>('stats');
@@ -41,16 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentDetail: OCRHistoryEntry | null = null;
   let busy = false;
 
-  function setStatus(el: HTMLElement, message: string, kind = ''): void {
-    el.textContent = message;
-    el.classList.remove('hidden', 'error', 'success', 'warn');
-    if (message) el.classList.add(kind);
-    else el.classList.add('hidden');
-  }
-
   function setBusy(value: boolean): void {
     busy = value;
-    [signOutBtn, syncBtn, clearHistoryBtn].forEach((b) => {
+    [signOutBtn, clearHistoryBtn, syncRetryBtn].forEach((b) => {
       b.disabled = value;
     });
   }
@@ -76,21 +69,21 @@ document.addEventListener('DOMContentLoaded', () => {
     return user;
   }
 
-  async function syncNow(showStatus = true): Promise<boolean> {
+  function showSyncError(message: string): void {
+    syncErrorText.textContent = message;
+    syncError.classList.remove('hidden');
+  }
+
+  // Merge local + cloud history. Silent on success — only failures surface.
+  async function runSync(): Promise<boolean> {
     const res = await sendMessage({ type: 'SYNC_HISTORY' });
-    if (res?.ok && showStatus) {
-      const { total = 0, uploaded = 0 } = res.stats || {};
-      setStatus(
-        syncStatus,
-        `Synced · ${total} item${total === 1 ? '' : 's'}${uploaded ? ` · ${uploaded} uploaded` : ''}`,
-        'success',
-      );
-    } else if (!res?.ok) {
-      // errors always surface — a silent failed sync looks like lost history
-      setStatus(syncStatus, res?.error || 'Sync failed', 'error');
+    if (res?.ok) {
+      syncError.classList.add('hidden');
+      await loadHistory();
+      return true;
     }
-    if (res?.ok) await loadHistory();
-    return Boolean(res?.ok);
+    showSyncError(res?.error || 'Sync failed — history stays only on this device.');
+    return false;
   }
 
   // ---------- account actions ----------
@@ -105,12 +98,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  syncBtn.addEventListener('click', async () => {
+  syncRetryBtn.addEventListener('click', async () => {
     if (busy) return;
     setBusy(true);
     try {
-      setStatus(syncStatus, 'Syncing…');
-      await syncNow(true);
+      await runSync();
     } finally {
       setBusy(false);
     }
@@ -272,9 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = await refreshAccount();
     if (!user) return;
     await loadHistory();
-    // Auto-sync on open; failures surface in the sync status line.
-    syncNow(false).catch((err: unknown) =>
-      setStatus(syncStatus, err instanceof Error ? err.message : 'Sync failed', 'error'),
-    );
+    // Sync runs automatically in the background; only failures surface.
+    runSync().catch((err: unknown) => showSyncError(err instanceof Error ? err.message : 'Sync failed'));
   })();
 });
