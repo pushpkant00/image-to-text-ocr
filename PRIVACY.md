@@ -7,7 +7,7 @@ _Last updated: 6 October 2026_
 ## 1. Data processed on your device
 
 - Captured screenshots, selected regions, pasted images, and image files you open are processed **locally** in an offscreen document using Tesseract.js (WebAssembly).
-- Extracted text, confidence scores, and language are saved to history in `chrome.storage.local` on your device.
+- Extracted text, confidence scores, and language are saved to history. While you are not logged in (first use or guest), history lives in `chrome.storage.local` on your device; once you log in it is stored only in your account's encrypted cloud history (§2) and removed from browser storage.
 - Images are **not** stored in history and are discarded after recognition.
 - Settings are stored in `chrome.storage.sync` and travel through Google's Chrome Sync only if you have browser sync enabled — the extension itself does not send them anywhere.
 
@@ -15,7 +15,7 @@ If you never log in, **nothing about your OCR activity leaves your device**.
 
 ## 2. Optional account and cloud history
 
-You can log in with your Google account or an email sign-in link to merge history across devices. This is off by default and every core feature works without it.
+You can log in with your Google account or an email sign-in link. This is off by default and every core feature works without it. When you log in, your history is stored in your account's database instead of browser storage and follows you to every device you sign in on.
 
 When you log in, the extension contacts **Firebase Authentication** and stores:
 
@@ -25,7 +25,7 @@ When you log in, the extension contacts **Firebase Authentication** and stores:
 
 Encryption happens before anything is uploaded, so your history is never stored as plain text. The key lives in your own profile document instead of being derived from a password: treat this as defense-in-depth at rest, not zero-knowledge against Google itself (Google operates both Firebase Authentication and Firestore and could technically read the key and the data together). Neither ever leaves Google's servers — and your images never reach any server at all.
 
-When signed in, history entries you create are uploaded automatically so they appear on your other signed-in devices, and entries from other devices are merged into your local history (newest 100, deduplicated).
+When signed in, new entries are written straight to your account's database (browser storage stays empty) and the side panel/dashboard read from it (newest 100). Entries you collected before logging in are uploaded automatically on sign-in. When you sign out, a decrypted copy is kept locally so your history remains available on this device.
 
 ## 3. Every network request the extension can make
 

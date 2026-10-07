@@ -64,10 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
     openLoginModal({
       onSignedIn: (user) => {
         applyAccountState(user);
-        // Merge the cloud copy straight away so the list matches the dashboard.
-        void sendMessage({ type: 'SYNC_HISTORY' })
-          .then(() => loadHistory())
-          .catch(() => {});
+        // The background signs in and syncs to the database automatically;
+        // HISTORY_UPDATED below reloads the list when that lands.
       },
     });
   });
@@ -82,13 +80,19 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHistory();
   }
 
-  // Live-update when background saves new entries
+  // Live-update when background saves new entries (signed-out, local copy)
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.history) {
       const value = changes.history.newValue;
       history = Array.isArray(value) ? (value as OCRHistoryEntry[]) : [];
-      if (detailPanel.classList.contains('hidden')) renderHistory();
+      renderHistory();
     }
+  });
+
+  // Signed in → history lives in the database; reload when it changes there.
+  chrome.runtime.onMessage.addListener((message) => {
+    const msg = message as { type?: string };
+    if (msg?.type === 'HISTORY_UPDATED') void loadHistory();
   });
 
   function emptyState(msg: string): void {

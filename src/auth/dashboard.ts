@@ -123,6 +123,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Signed in → history lives in the database; reload when it changes there.
+  chrome.runtime.onMessage.addListener((message) => {
+    const msg = message as { type?: string };
+    if (msg?.type === 'HISTORY_UPDATED') void loadHistory();
+  });
+
   function emptyState(kind: 'initial' | 'nomatch'): void {
     historyList.innerHTML = '';
     const wrap = document.createElement('div');
@@ -263,8 +269,12 @@ document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     const user = await refreshAccount();
     if (!user) return;
-    await loadHistory();
-    // Sync runs automatically in the background; only failures surface.
-    runSync().catch((err: unknown) => showSyncError(err instanceof Error ? err.message : 'Sync failed'));
+    // Sync first (flushes staging entries to the database and reloads the
+    // list); fall back to a direct read if it fails — only failures surface.
+    const synced = await runSync().catch((err: unknown) => {
+      showSyncError(err instanceof Error ? err.message : 'Sync failed');
+      return false;
+    });
+    if (!synced) await loadHistory();
   })();
 });

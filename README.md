@@ -55,7 +55,7 @@ Works on normal websites. It **cannot** run on `chrome://` pages, the new-tab pa
 
 ## Optional: login & cloud history (Firebase)
 
-History lives in `chrome.storage.local` by default. To see the same history on all your devices, log in with Google (or an email sign-in link) from the popup or side panel — entries merge (deduped, newest 100 win) and new results upload automatically.
+History lives in `chrome.storage.local` while you're not logged in (first-time / guest use). Log in with Google (or an email sign-in link) from the popup or side panel and history moves to your account's encrypted database: entries collected before logging in upload on sign-in, new results go straight to the database, and browser storage stays empty until you sign out (a local copy is restored then). Newest 100 entries are kept, deduplicated.
 
 One-time setup:
 
@@ -99,7 +99,7 @@ side panel (searchable history) + result card + popup converters (.docx/.pdf)
 
 - **Why an offscreen document?** Manifest V3 service workers have no DOM/canvas and can't host Tesseract's worker — Chrome's `chrome.offscreen` API is the sanctioned home for it.
 - **Why `captureVisibleTab`?** Reading an `<img>` via canvas fails on cross-origin images (canvas tainting). Capturing the compositor's pixels sidesteps CORS entirely, so even video frames work.
-- **Storage:** settings in `chrome.storage.sync`, history in `chrome.storage.local` (image-free entries; sync quotas are too small for history).
+- **Storage:** settings in `chrome.storage.sync`; history in `chrome.storage.local` while signed out and in your account's encrypted Firestore history while signed in (image-free entries; Chrome sync quotas are too small for history).
 
 ## Project structure
 

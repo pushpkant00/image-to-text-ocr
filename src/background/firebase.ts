@@ -420,6 +420,15 @@ export async function deleteAccount(): Promise<void> {
 
 export async function signOut(): Promise<void> {
   const auth = await getSession();
+  // While signed in the database is the store — copy it back to this device so
+  // history stays available (chrome.storage.local) after signing out.
+  if (auth) {
+    try {
+      await chrome.storage.local.set({ history: await listHistory() });
+    } catch {
+      /* offline — keep whatever local copy exists */
+    }
+  }
   await clearSession();
   await dropGoogleToken();
   // Drop this device's cached sync key — it is re-fetched from the account
@@ -722,10 +731,12 @@ async function listHistoryCloud(): Promise<CloudHistory> {
     }
     entries.push(entry);
   }
+  entries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   return { entries, legacyIds };
 }
 
-async function listHistory(): Promise<OCRHistoryEntry[]> {
+/** Cloud history, newest first — the primary store while signed in. */
+export async function listHistory(): Promise<OCRHistoryEntry[]> {
   return (await listHistoryCloud()).entries;
 }
 
@@ -802,17 +813,15 @@ export async function syncHistory(): Promise<SyncStats> {
   const { entries: cloud, legacyIds } = await listHistoryCloud();
   const { history: local = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });
 
-  const byId = new Map<string, OCRHistoryEntry>();
-  for (const entry of cloud) byId.set(entry.id, entry);
-  for (const entry of local) byId.set(entry.id, entry); // local copy wins on id collision
-
-  const merged = [...byId.values()]
+  // While signed in the account database is the store. chrome.storage.local
+  // only holds staging entries that have not reached the cloud yet (written
+  // offline or while signed out) — push them up, then empty the staging area.
+  const cloudIds = new Set(cloud.map((entry) => entry.id));
+  const merged = [...cloud, ...local.filter((entry) => !cloudIds.has(entry.id))]
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .slice(0, HISTORY_LIMIT);
-  await chrome.storage.local.set({ history: merged });
 
   const mergedIds = new Set(merged.map((entry) => entry.id));
-  const cloudIds = new Set(cloud.map((entry) => entry.id));
   const toUpload = merged.filter((entry) => !cloudIds.has(entry.id));
   // Pre-encryption cloud docs: rewrite them encrypted under the same id.
   const toEncrypt = merged.filter((entry) => legacyIds.has(entry.id));
@@ -820,6 +829,10 @@ export async function syncHistory(): Promise<SyncStats> {
 
   await putEntries([...toUpload, ...toEncrypt]);
   await deleteEntries(toDelete);
+  await chrome.storage.local.set({ history: [] });
+
+  // Open UIs read through GET_HISTORY (cloud) — nudge them to reload.
+  chrome.runtime.sendMessage({ type: 'HISTORY_UPDATED' }).catch(() => {});
 
   return { uploaded: toUpload.length + toEncrypt.length, removed: toDelete.length, total: merged.length };
 }

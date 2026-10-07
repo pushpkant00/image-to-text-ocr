@@ -10,6 +10,7 @@ import {
   removeEntryFromCloud,
   clearCloudHistory,
   syncHistory,
+  listHistory,
 } from './firebase.js';
 import { isFirebaseConfigured } from '../shared/firebase-config.js';
 
@@ -132,9 +133,20 @@ async function processResult(
     ...extra,
   };
   if (text) {
-    await saveHistoryEntry(entry);
-    // mirror to the signed-in account (no-op when signed out)
-    await pushEntry(entry).catch((err: unknown) => console.warn('[ocr] cloud push failed:', errorMessage(err)));
+    const user = await getAuthState();
+    if (user) {
+      // Signed in → the account database is the store (browser storage stays clean).
+      try {
+        await pushEntry(entry);
+        chrome.runtime.sendMessage({ type: 'HISTORY_UPDATED' }).catch(() => {});
+      } catch (err) {
+        console.warn('[ocr] cloud push failed, staged on-device:', errorMessage(err));
+        await saveHistoryEntry(entry); // flushes to the cloud on the next sync
+      }
+    } else {
+      // Signed out (first-time / guest) → history lives in chrome.storage.local.
+      await saveHistoryEntry(entry);
+    }
   }
   return entry;
 }
@@ -303,21 +315,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: true });
         break;
       case 'GET_HISTORY': {
-        const { history = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });
-        sendResponse({ ok: true, history });
+        const { history: local = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });
+        let history = local;
+        let error: string | undefined;
+        if (await getAuthState()) {
+          // Signed in → read from the account database, not browser storage.
+          try {
+            const cloud = await listHistory();
+            const ids = new Set(cloud.map((entry) => entry.id));
+            history = [...cloud, ...local.filter((entry) => !ids.has(entry.id))] // local = unflushed staging
+              .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+              .slice(0, 100);
+          } catch (err) {
+            error = errorMessage(err); // offline — fall back to the staging copy below
+          }
+        }
+        sendResponse(history.length || !error ? { ok: true, history } : { ok: false, error });
         break;
       }
       case 'CLEAR_HISTORY':
         await chrome.storage.local.set({ history: [] });
         clearCloudHistory().catch((err: unknown) => console.warn('[ocr] cloud clear failed:', errorMessage(err)));
+        chrome.runtime.sendMessage({ type: 'HISTORY_UPDATED' }).catch(() => {});
         sendResponse({ ok: true });
         break;
       case 'DELETE_ENTRY': {
         const { history = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });
         await chrome.storage.local.set({ history: history.filter((e) => e.id !== msg.id) });
-        removeEntryFromCloud(msg.id).catch((err: unknown) =>
+        await removeEntryFromCloud(msg.id).catch((err: unknown) =>
           console.warn('[ocr] cloud delete failed:', errorMessage(err)),
         );
+        chrome.runtime.sendMessage({ type: 'HISTORY_UPDATED' }).catch(() => {});
         sendResponse({ ok: true });
         break;
       }
