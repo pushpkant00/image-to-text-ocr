@@ -312,6 +312,11 @@ async function finishSignIn(data: IdentityResponse, email: string): Promise<Auth
   if (lastAccountUid && lastAccountUid !== user.uid) await chrome.storage.local.set({ history: [] });
   await chrome.storage.local.set({ [LAST_ACCOUNT_KEY]: user.uid });
   await ensureSyncKey(); // throw → login reports the setup failure
+  // Silent merge/upload right after any sign-in (popup, sidepanel, page) so a
+  // fresh install pulls the cloud history back without opening the dashboard.
+  void syncHistory().catch((err: unknown) =>
+    console.warn('[auth] post-sign-in sync failed:', err instanceof Error ? err.message : String(err)),
+  );
   return user;
 }
 
