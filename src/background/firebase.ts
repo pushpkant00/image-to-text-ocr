@@ -673,9 +673,17 @@ async function firestoreError(res: Response): Promise<Error> {
   } catch {
     /* keep default message */
   }
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
+    // firestoreFetch already forced one token refresh — the session is truly dead.
     await clearSession();
     return new Error('Session expired — please sign in again.');
+  }
+  if (res.status === 403) {
+    // Permission/rules problem — NOT a dead session. Never drop the login here:
+    // the user must stay signed in so their staged history stays reachable.
+    return new Error(
+      'Database permission denied — in the Firebase console open Firestore → Rules and publish the rules from the README (only the signed-in owner can read their history).',
+    );
   }
   return new Error(message);
 }
@@ -829,6 +837,9 @@ export async function syncHistory(): Promise<SyncStats> {
 
   await putEntries([...toUpload, ...toEncrypt]);
   await deleteEntries(toDelete);
+  // Only drop the local staging copy once the database reads back OK — a
+  // rules/permission problem must never make history disappear.
+  if (local.length) await listHistoryCloud();
   await chrome.storage.local.set({ history: [] });
 
   // Open UIs read through GET_HISTORY (cloud) — nudge them to reload.

@@ -328,6 +328,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               .slice(0, 100);
           } catch (err) {
             error = errorMessage(err); // offline — fall back to the staging copy below
+            console.warn('[sync] history read from database failed:', error);
           }
         }
         sendResponse(history.length || !error ? { ok: true, history } : { ok: false, error });

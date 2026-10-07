@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let history: OCRHistoryEntry[] = [];
   let currentDetail: OCRHistoryEntry | null = null;
+  let loadError = '';
 
   async function sendMessage<T = RuntimeResponse>(message: BackgroundRequest): Promise<T> {
     const res = (await chrome.runtime.sendMessage(message)) as T | undefined;
@@ -75,18 +76,24 @@ document.addEventListener('DOMContentLoaded', () => {
   );
 
   async function loadHistory(): Promise<void> {
-    const res = await sendMessage<{ ok?: boolean; history?: OCRHistoryEntry[] }>({ type: 'GET_HISTORY' });
-    history = res?.ok && res.history ? res.history : [];
+    const res = await sendMessage<{ ok?: boolean; history?: OCRHistoryEntry[]; error?: string }>({
+      type: 'GET_HISTORY',
+    });
+    if (!res?.ok) {
+      history = [];
+      loadError = res?.error || 'Could not load your history.';
+      renderHistory();
+      return;
+    }
+    loadError = '';
+    history = res.history || [];
     renderHistory();
   }
 
-  // Live-update when background saves new entries (signed-out, local copy)
+  // Local history changed (signed-out saves, sign-in flush) — re-read through
+  // GET_HISTORY so the right store (database vs local) is always rendered.
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.history) {
-      const value = changes.history.newValue;
-      history = Array.isArray(value) ? (value as OCRHistoryEntry[]) : [];
-      renderHistory();
-    }
+    if (area === 'local' && changes.history) void loadHistory();
   });
 
   // Signed in → history lives in the database; reload when it changes there.
@@ -104,6 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderHistory(): void {
+    if (loadError) {
+      emptyState(loadError);
+      return;
+    }
     const query = searchInput.value.trim().toLowerCase();
     const filterLang = filterLanguage.value;
     const filtered = history.filter(

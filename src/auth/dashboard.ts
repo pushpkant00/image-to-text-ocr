@@ -111,16 +111,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------- history ----------
   async function loadHistory(): Promise<void> {
     const res = await sendMessage({ type: 'GET_HISTORY' });
-    history = res?.ok && res.history ? res.history : [];
+    if (!res.ok && res.error) showSyncError(res.error);
+    history = res.ok && Array.isArray(res.history) ? res.history : [];
     renderHistory();
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.history) {
-      const value = changes.history.newValue;
-      history = Array.isArray(value) ? (value as OCRHistoryEntry[]) : [];
-      renderHistory();
-    }
+    if (area === 'local' && changes.history) void loadHistory();
   });
 
   // Signed in → history lives in the database; reload when it changes there.

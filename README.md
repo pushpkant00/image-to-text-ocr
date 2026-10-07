@@ -79,6 +79,8 @@ service cloud.firestore {
 
 7. `npm run build`, reload the extension
 
+> **"Database permission denied"?** A fresh Firestore database starts in **locked mode** (everything denied). Paste the rules block above into **Firestore Database → Rules** and click **Publish** — until then login and history will report that error instead of working.
+
 > If your browser key has HTTP referrer restrictions, add `chrome-extension://<your-extension-id>` or use an unrestricted key for the Identity Toolkit API. Without config the extension works exactly as before — the Login card shows a hint instead.
 
 ## How it works
