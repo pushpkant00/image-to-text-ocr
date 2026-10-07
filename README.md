@@ -14,7 +14,7 @@ Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, 
 - **Side-panel history** — searchable, per-language filter, confidence scores, delete/clear
 - **100% offline English OCR** — Tesseract.js + language data bundled, nothing ever leaves your machine
 - **Multi-language** — English works offline; other languages download their model once on first use
-- **Optional login & cloud history** — log in from the popup or side panel (Google or a 6-digit email OTP) to merge your history with a Firebase account across devices (off by default)
+- **Optional login & cloud history** — log in from the popup or side panel (Google or an email sign-in link) to merge your history with a Firebase account across devices (off by default)
 
 ## Install (use it)
 
@@ -55,17 +55,16 @@ Works on normal websites. It **cannot** run on `chrome://` pages, the new-tab pa
 
 ## Optional: login & cloud history (Firebase)
 
-History lives in `chrome.storage.local` by default. To see the same history on all your devices, log in with Google (or a one-time 6-digit code sent to your email) from the popup or side panel — entries merge (deduped, newest 100 win) and new results upload automatically.
+History lives in `chrome.storage.local` by default. To see the same history on all your devices, log in with Google (or an email sign-in link) from the popup or side panel — entries merge (deduped, newest 100 win) and new results upload automatically.
 
 One-time setup:
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
-2. **Authentication → Sign-in method** → enable **Google** and **Email/Password** (the email OTP login uses both)
+2. **Authentication → Sign-in method** → enable **Google** (and **Email/Password** if you also want email-link login)
 3. **Firestore Database → Create database** (production mode)
 4. Project settings → **Your apps → Web app** → copy `apiKey`, `authDomain`, `projectId` into `firebase-secrets.json` (start from `firebase-secrets.example.json`; the file is gitignored and injected into `dist/` at build time — without it the extension still builds, but sign-in and cloud sync stay disabled)
 5. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) of the same project: **OAuth consent screen** → External → add your Google account under **Test users**, then **Credentials → Create credentials → OAuth client ID → Chrome extension** → paste the **Item ID** from `chrome://extensions` → copy the client ID into `firebase-secrets.json` as `googleClientId`
-6. [Enable the Gmail API](https://console.developers.google.com/apis/api/gmail.googleapis.com) for the project — the email OTP code is sent **from your own Gmail account** via the Gmail API, so the Google account signed into Chrome must be a Gmail account **and** a member of this Firebase project (project owner is enough — that's you during development)
-7. Firestore **Rules** — only the owner can read/write their history:
+6. Firestore **Rules** — only the owner can read/write their history:
 
 ```
 rules_version = '2';
@@ -78,7 +77,7 @@ service cloud.firestore {
 }
 ```
 
-8. `npm run build`, reload the extension — the first **Send OTP** may show a Chrome prompt asking you to approve the extra permissions (sending your login code); accept it once
+7. `npm run build`, reload the extension
 
 > If your browser key has HTTP referrer restrictions, add `chrome-extension://<your-extension-id>` or use an unrestricted key for the Identity Toolkit API. Without config the extension works exactly as before — the Login card shows a hint instead.
 

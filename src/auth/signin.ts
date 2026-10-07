@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
       hint =
         'Cloud sync is off — add your Firebase config (apiKey, authDomain, projectId) to firebase-secrets.json and rebuild.';
     } else if (res?.ok && !res.googleAuth) {
-      hint = 'Login is not configured — add googleClientId to firebase-secrets.json and rebuild.';
+      hint = 'Google login is not configured — add googleClientId to firebase-secrets.json and rebuild.';
     }
     mountLoginCard(shell, {
       hint,

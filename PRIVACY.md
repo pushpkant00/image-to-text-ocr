@@ -15,7 +15,7 @@ If you never log in, **nothing about your OCR activity leaves your device**.
 
 ## 2. Optional account and cloud history
 
-You can log in with your Google account or a one-time 6-digit code sent to your email to merge history across devices. This is off by default and every core feature works without it.
+You can log in with your Google account or an email sign-in link to merge history across devices. This is off by default and every core feature works without it.
 
 When you log in, the extension contacts **Firebase Authentication** and stores:
 
@@ -31,8 +31,7 @@ When signed in, history entries you create are uploaded automatically so they ap
 
 | Destination | When | What is sent |
 |---|---|---|
-| `identitytoolkit.googleapis.com` | Only when you log in (Google or email code) or delete your account | A Google access token (for Google login and for issuing email login codes), your email address, account tokens |
-| `gmail.googleapis.com` | Only when you request an email login code | Your one-time 6-digit login code, sent as a single email to the address you entered — sent from your own Gmail account (the extension can only send this one email; it never reads your mail) |
+| `identitytoolkit.googleapis.com` | Only when you log in (Google or email link) or delete your account | A Google access token (for Google login), your email address (for email-link login), account tokens |
 | `securetoken.googleapis.com` | Only while signed in | Refresh token (routine token renewal) |
 | `firestore.googleapis.com` | Only while signed in | Your uid, encrypted history entries, encryption key (in your private profile document) |
 | `cdn.jsdelivr.net` | First use of a non-English language | Nothing personal — downloads the open-source language model file (e.g. `fra.traineddata.gz`); English is bundled and needs no download |
@@ -50,7 +49,6 @@ The OCR engine itself makes no network calls during recognition.
 ## 5. Third-party services
 
 - **Firebase / Google** (authentication, Firestore) — only used if you enable login. Subject to [Google's Privacy Policy](https://policies.google.com/privacy).
-- **Gmail API** — only if you request an email login code; the extension sends that one code email from your own Gmail account (send permission only — it never reads your mail).
 - **jsDelivr** — serves open-source OCR language models; receives a routine file download (no account data).
 
 ## 6. Data removal
