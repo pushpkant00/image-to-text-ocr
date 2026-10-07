@@ -1,5 +1,6 @@
 import { buildDocx } from '../convert/docx.js';
 import { buildPdf } from '../convert/pdf-writer.js';
+import { openLoginModal } from '../shared/login.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const q = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -109,24 +110,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.close();
   });
 
-  // --- account entry (direct sign-in from the popup, like other extensions) ---
-  let accountPage = 'auth/signin.html';
+  // --- account entry: Login opens as an in-popup modal; the dashboard opens in a tab ---
+  let signedIn = false;
+  function markSignedIn(): void {
+    signedIn = true;
+    accountBtn.title = 'Account';
+    accountBtn.setAttribute('aria-label', 'Account');
+    accountBtn.classList.add('signed-in');
+  }
   async function loadAuthState(): Promise<void> {
     try {
       const res = await chrome.runtime.sendMessage({ type: 'AUTH_STATE' });
-      if (res?.ok && res.user) {
-        accountPage = 'auth/dashboard.html';
-        accountBtn.title = 'Account';
-        accountBtn.setAttribute('aria-label', 'Account');
-        accountBtn.classList.add('signed-in');
-      }
+      if (res?.ok && res.user) markSignedIn();
     } catch {
-      /* stay in signed-out state */
+      /* stay in logged-out state */
     }
   }
   accountBtn.addEventListener('click', async () => {
-    await chrome.tabs.create({ url: chrome.runtime.getURL(accountPage) });
-    window.close();
+    if (signedIn) {
+      await chrome.tabs.create({ url: chrome.runtime.getURL('auth/dashboard.html') });
+      window.close();
+      return;
+    }
+    openLoginModal({ onSignedIn: markSignedIn });
   });
 
   async function loadLastResult(): Promise<void> {

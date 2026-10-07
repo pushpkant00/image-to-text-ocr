@@ -11,15 +11,15 @@ _Last updated: 6 October 2026_
 - Images are **not** stored in history and are discarded after recognition.
 - Settings are stored in `chrome.storage.sync` and travel through Google's Chrome Sync only if you have browser sync enabled — the extension itself does not send them anywhere.
 
-If you never sign in, **nothing about your OCR activity leaves your device**.
+If you never log in, **nothing about your OCR activity leaves your device**.
 
 ## 2. Optional account and cloud history
 
-You can sign in with your Google account to merge history across devices. This is off by default and every core feature works without it.
+You can log in with your Google account or an email sign-in link to merge history across devices. This is off by default and every core feature works without it.
 
-When you sign in, the extension contacts **Firebase Authentication** (Google) and stores:
+When you log in, the extension contacts **Firebase Authentication** and stores:
 
-- your Google account's email address and account identifier (uid), needed to authenticate you;
+- your account's email address and account identifier (uid), needed to authenticate you;
 - your history entries in **Cloud Firestore**, where the **text is encrypted on your device before upload** (AES-256-GCM) — only non-sensitive metadata (language, confidence, timestamp, crop area) is stored in plain form;
 - a small profile document containing the account's random encryption key, readable only while signed in as you (Firestore security rules restrict every `users/{uid}` document to its owner).
 
@@ -31,7 +31,7 @@ When signed in, history entries you create are uploaded automatically so they ap
 
 | Destination | When | What is sent |
 |---|---|---|
-| `identitytoolkit.googleapis.com` | Only when you sign in with Google or delete your account | A Google access token (over TLS, for authentication), account tokens |
+| `identitytoolkit.googleapis.com` | Only when you log in (Google or email link) or delete your account | A Google access token (for Google login), your email address (for email-link login), account tokens |
 | `securetoken.googleapis.com` | Only while signed in | Refresh token (routine token renewal) |
 | `firestore.googleapis.com` | Only while signed in | Your uid, encrypted history entries, encryption key (in your private profile document) |
 | `cdn.jsdelivr.net` | First use of a non-English language | Nothing personal — downloads the open-source language model file (e.g. `fra.traineddata.gz`); English is bundled and needs no download |
@@ -48,14 +48,14 @@ The OCR engine itself makes no network calls during recognition.
 
 ## 5. Third-party services
 
-- **Firebase / Google** (authentication, Firestore) — only used if you enable sign-in. Subject to [Google's Privacy Policy](https://policies.google.com/privacy).
+- **Firebase / Google** (authentication, Firestore) — only used if you enable login. Subject to [Google's Privacy Policy](https://policies.google.com/privacy).
 - **jsDelivr** — serves open-source OCR language models; receives a routine file download (no account data).
 
 ## 6. Data removal
 
 - Delete individual entries or clear all history from the side panel at any time.
-- Deleting your account from Settings → Danger zone re-confirms with Google and a typed confirmation, then deletes your synced history, deletes the account itself, and clears local history.
-- Uninstalling the extension removes local data; to clear synced data, sign in and delete your history/account first.
+- Deleting your account from Settings → Danger zone asks for a typed confirmation and re-confirms your login if Firebase requires it, then deletes your synced history, deletes the account itself, and clears local history.
+- Uninstalling the extension removes local data; to clear synced data, log in and delete your history/account first.
 
 ## 7. Children
 

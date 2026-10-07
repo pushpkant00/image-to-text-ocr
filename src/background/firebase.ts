@@ -67,9 +67,22 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many attempts. Try again later.',
 };
 
-function friendlyError(raw: string): string {
+/** Error table for the email sign-in link flow (same codes, other wording). */
+const EMAIL_ERROR_MESSAGES: Record<string, string> = {
+  ...AUTH_ERROR_MESSAGES,
+  OPERATION_NOT_ALLOWED:
+    'Email login is not enabled — in the Firebase console open Authentication → Sign-in method and enable Email/Password.',
+  INVALID_OOB_CODE: 'That login link is invalid or was already used — send a new one.',
+  EXPIRED_OOB_CODE: 'That login link has expired — send a new one.',
+  INVALID_EMAIL: 'Enter a valid email address.',
+  MISSING_EMAIL: 'Enter a valid email address.',
+  USER_NOT_FOUND: 'No account for that email yet — send the link again and wait a moment.',
+};
+
+function friendlyError(raw: string, kind: 'google' | 'email' = 'google'): string {
   const code = String(raw || '').split(':')[0].trim();
-  return AUTH_ERROR_MESSAGES[code] || raw || 'Request failed.';
+  const table = kind === 'email' ? EMAIL_ERROR_MESSAGES : AUTH_ERROR_MESSAGES;
+  return table[code] || AUTH_ERROR_MESSAGES[code] || raw || 'Request failed.';
 }
 
 function requireConfigured(): void {
@@ -131,9 +144,11 @@ interface RequestOptions {
   body?: Record<string, unknown>;
   form?: boolean;
   headers?: Record<string, string>;
+  /** Which error-message table to use — Google sign-in vs email link login. */
+  kind?: 'google' | 'email';
 }
 
-async function request<T>(url: string, { body, form = false, headers = {} }: RequestOptions = {}): Promise<T> {
+async function request<T>(url: string, { body, form = false, headers = {}, kind = 'google' }: RequestOptions = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, {
@@ -152,7 +167,7 @@ async function request<T>(url: string, { body, form = false, headers = {} }: Req
     throw networkError();
   }
   const data = (await res.json().catch(() => null)) as FirestoreResponse | null;
-  if (!res.ok) throw new Error(friendlyError(data?.error?.message || `Request failed (${res.status})`));
+  if (!res.ok) throw new Error(friendlyError(data?.error?.message || `Request failed (${res.status})`, kind));
   return data as T;
 }
 
@@ -282,15 +297,78 @@ export async function signInWithGoogle(): Promise<AuthUser> {
   requireConfigured();
   await assertNotLocked();
   const data = await signInWithGoogleIdp();
-  const user = await persistAuth(data, data.email || '');
-  // Account switch on this device → the previous account's history must not
-  // show (or sync) under the new account. Same account keeps the device
-  // history so it can be merged back with the cloud copy on sync.
+  return finishSignIn(data, data.email || '');
+}
+
+/**
+ * Persist a fresh Identity Toolkit session and prepare this device for sync.
+ * Account switch on this device → the previous account's history must not
+ * show (or sync) under the new account. Same account keeps the device
+ * history so it can be merged back with the cloud copy on sync.
+ */
+async function finishSignIn(data: IdentityResponse, email: string): Promise<AuthUser> {
+  const user = await persistAuth(data, email);
   const { lastAccountUid = null } = await chrome.storage.local.get<LocalStorage>(LAST_ACCOUNT_KEY);
   if (lastAccountUid && lastAccountUid !== user.uid) await chrome.storage.local.set({ history: [] });
   await chrome.storage.local.set({ [LAST_ACCOUNT_KEY]: user.uid });
-  await ensureSyncKey(); // throw → sign-in reports the setup failure
+  await ensureSyncKey(); // throw → login reports the setup failure
   return user;
+}
+
+// ---------- email sign-in link (passwordless, like a one-time login code) ----------
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Pull the oobCode out of a pasted Firebase action link (or accept a bare code). */
+function extractOobCode(pasted: string): string {
+  const value = String(pasted || '')
+    .trim()
+    .replace(/^['"<(\[]+/, '')
+    .replace(/['">)\]]+$/, '');
+  if (!value) return '';
+  const fromUrl = /[?&#]oobCode=([^&\s]+)/.exec(value);
+  if (fromUrl) {
+    try {
+      return decodeURIComponent(fromUrl[1]);
+    } catch {
+      return fromUrl[1];
+    }
+  }
+  return /^[A-Za-z0-9_-]{10,}$/.test(value) ? value : '';
+}
+
+/** Send the passwordless email sign-in link (Firebase EMAIL_SIGNIN out-of-band code). */
+export async function sendLoginEmail(email: string): Promise<void> {
+  requireConfigured();
+  await assertNotLocked();
+  const addr = String(email || '').trim();
+  if (!EMAIL_RE.test(addr) || addr.length >= 256) throw new Error('Enter a valid email address.');
+  await request(identityUrl('accounts:sendOobCode'), {
+    kind: 'email',
+    body: { requestType: 'EMAIL_SIGNIN', email: addr, canHandleCodeInApp: true },
+  });
+}
+
+/** Complete the email login: paste the emailed link (or the bare oobCode). */
+export async function loginWithEmail(email: string, pasted: string): Promise<AuthUser> {
+  requireConfigured();
+  await assertNotLocked();
+  const addr = String(email || '').trim();
+  if (!EMAIL_RE.test(addr)) throw new Error('Enter a valid email address.');
+  const oobCode = extractOobCode(pasted);
+  if (!oobCode) throw new Error('Paste the login link (or the code) from your email.');
+  let data: IdentityResponse;
+  try {
+    data = await request<IdentityResponse>(identityUrl('accounts:signInWithEmailLink'), {
+      kind: 'email',
+      body: { email: addr, oobCode },
+    });
+  } catch (err) {
+    if (!isNetworkError(err)) await recordFailure();
+    throw err;
+  }
+  await clearFailures();
+  if (!data.localId || !data.refreshToken) throw new Error('Login failed — try again.');
+  return finishSignIn(data, addr);
 }
 
 export async function deleteAccount(): Promise<void> {
@@ -298,16 +376,41 @@ export async function deleteAccount(): Promise<void> {
   const auth = await getSession();
   if (!auth) throw new Error('Not signed in.');
   await assertNotLocked();
-  // Fresh Google sign-in so deletion satisfies Firebase's "recent login" check.
-  const data = await signInWithGoogleIdp();
-  if (!data.idToken) throw new Error('Could not re-authenticate — try again.');
-  // Best-effort cloud wipe while the fresh token is valid, then delete the
-  // account itself (which also invalidates the tokens).
+
+  // Best-effort cloud wipe while the session is still valid.
   await clearCloudHistory().catch(() => {});
-  await request(identityUrl('accounts:delete'), { body: { idToken: data.idToken } });
-  await dropGoogleToken();
-  await clearSession();
-  await chrome.storage.local.remove(['history', 'syncKeys', LAST_ACCOUNT_KEY]);
+
+  const finishDelete = async (): Promise<void> => {
+    await dropGoogleToken();
+    await clearSession();
+    await chrome.storage.local.remove(['history', 'syncKeys', LAST_ACCOUNT_KEY]);
+  };
+
+  // Prefer the session's own (freshly refreshed) token — no extra prompts.
+  // If Firebase demands a newer login, re-confirm with Google.
+  const sessionToken = await getIdToken({ force: true }).catch(() => null);
+  if (sessionToken) {
+    try {
+      await request(identityUrl('accounts:delete'), { body: { idToken: sessionToken } });
+      await finishDelete();
+      return;
+    } catch (err) {
+      if (isNetworkError(err)) throw err;
+    }
+  }
+  try {
+    const data = await signInWithGoogleIdp();
+    if (!data.idToken) throw new Error('Could not re-authenticate — try again.');
+    await request(identityUrl('accounts:delete'), { body: { idToken: data.idToken } });
+  } catch (err) {
+    if (err instanceof Error && err.message === AUTH_ERROR_MESSAGES.ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL) {
+      throw new Error(
+        'This account logs in with email, so Google cannot re-confirm it. Log out, log back in with your email link, and delete the account within a minute of logging in — or delete the user in the Firebase console (Authentication → Users).',
+      );
+    }
+    throw err;
+  }
+  await finishDelete();
 }
 
 export async function signOut(): Promise<void> {

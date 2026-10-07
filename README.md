@@ -14,7 +14,7 @@ Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, 
 - **Side-panel history** — searchable, per-language filter, confidence scores, delete/clear
 - **100% offline English OCR** — Tesseract.js + language data bundled, nothing ever leaves your machine
 - **Multi-language** — English works offline; other languages download their model once on first use
-- **Optional login & cloud history** — sign in from the side panel to merge your history with a Firebase account across devices (off by default)
+- **Optional login & cloud history** — log in from the popup or side panel (Google or an email sign-in link) to merge your history with a Firebase account across devices (off by default)
 
 ## Install (use it)
 
@@ -55,12 +55,12 @@ Works on normal websites. It **cannot** run on `chrome://` pages, the new-tab pa
 
 ## Optional: login & cloud history (Firebase)
 
-History lives in `chrome.storage.local` by default. To see the same history on all your devices, sign in with Google from the side panel — entries merge (deduped, newest 100 win) and new results upload automatically.
+History lives in `chrome.storage.local` by default. To see the same history on all your devices, log in with Google (or an email sign-in link) from the popup or side panel — entries merge (deduped, newest 100 win) and new results upload automatically.
 
 One-time setup:
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
-2. **Authentication → Sign-in method → Google** → enable
+2. **Authentication → Sign-in method** → enable **Google** (and **Email/Password** if you also want email-link login)
 3. **Firestore Database → Create database** (production mode)
 4. Project settings → **Your apps → Web app** → copy `apiKey`, `authDomain`, `projectId` into `firebase-secrets.json` (start from `firebase-secrets.example.json`; the file is gitignored and injected into `dist/` at build time — without it the extension still builds, but sign-in and cloud sync stay disabled)
 5. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) of the same project: **OAuth consent screen** → External → add your Google account under **Test users**, then **Credentials → Create credentials → OAuth client ID → Chrome extension** → paste the **Item ID** from `chrome://extensions` → copy the client ID into `firebase-secrets.json` as `googleClientId`
@@ -79,7 +79,7 @@ service cloud.firestore {
 
 7. `npm run build`, reload the extension
 
-> If your browser key has HTTP referrer restrictions, add `chrome-extension://<your-extension-id>` or use an unrestricted key for the Identity Toolkit API. Without config the extension works exactly as before — the sign-in card shows a hint instead.
+> If your browser key has HTTP referrer restrictions, add `chrome-extension://<your-extension-id>` or use an unrestricted key for the Identity Toolkit API. Without config the extension works exactly as before — the Login card shows a hint instead.
 
 ## How it works
 
@@ -115,9 +115,9 @@ src/
   ocr/                   text cleanup utilities
   convert/               .docx/.pdf writers + pdf.js text assembly (shared modules)
   popup/                 toolbar popup: select, file/paste OCR, Convert tab, settings shortcut
-  sidepanel/             history panel: search, filter, copy, delete, sign in/out
-  auth/                  sign-in, account dashboard, settings page
-  shared/                ambient type definitions (types.d.ts) + Firebase config
+  sidepanel/             history panel: search, filter, copy, delete, login
+  auth/                  login card, account dashboard, settings page
+  shared/                ambient type definitions (types.d.ts), Firebase config, shared Login modal
 icons/                   extension icons
 docs/                    landing page (GitHub Pages, served from /docs)
 ```
@@ -134,7 +134,7 @@ docs/                    landing page (GitHub Pages, served from /docs)
 | `notifications` | Tell you when a page blocks extensions |
 | `http://*/*`, `https://*/*`, `file:///*` (host) | Run on normal sites; fetch right-clicked images for OCR |
 
-No analytics. The OCR path makes no network calls (after the one-time language download); the only other traffic is Firebase auth/history sync, and only when you sign in.
+No analytics. The OCR path makes no network calls (after the one-time language download); the only other traffic is Firebase auth/history sync, and only when you log in.
 
 Full details in [PRIVACY.md](PRIVACY.md).
 

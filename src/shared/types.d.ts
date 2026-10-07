@@ -109,6 +109,8 @@ type BackgroundRequest =
   | { type: 'DELETE_ENTRY'; id: string }
   | { type: 'AUTH_STATE' }
   | { type: 'AUTH_SIGN_IN_GOOGLE' }
+  | { type: 'AUTH_SEND_LOGIN_EMAIL'; email: string }
+  | { type: 'AUTH_LOGIN_WITH_EMAIL'; email: string; code: string }
   | { type: 'AUTH_SIGN_OUT' }
   | { type: 'AUTH_DELETE' }
   | { type: 'SYNC_HISTORY' }

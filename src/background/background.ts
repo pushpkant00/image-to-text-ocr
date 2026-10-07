@@ -2,6 +2,8 @@ import { cleanText } from '../ocr/text-detector.js';
 import {
   getAuthState,
   signInWithGoogle,
+  sendLoginEmail,
+  loginWithEmail,
   signOut,
   deleteAccount,
   pushEntry,
@@ -329,6 +331,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         break;
       case 'AUTH_SIGN_IN_GOOGLE':
         sendResponse({ ok: true, user: await signInWithGoogle() });
+        break;
+      case 'AUTH_SEND_LOGIN_EMAIL':
+        await sendLoginEmail(msg.email);
+        sendResponse({ ok: true });
+        break;
+      case 'AUTH_LOGIN_WITH_EMAIL':
+        sendResponse({ ok: true, user: await loginWithEmail(msg.email, msg.code) });
         break;
       case 'AUTH_SIGN_OUT':
         await signOut();

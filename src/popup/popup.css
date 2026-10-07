@@ -6,6 +6,9 @@ body {
   color: #333;
   overflow-x: hidden;
 }
+/* The Login modal is position:fixed — grow the popup so the whole card fits
+   (removed again when the modal closes). */
+body.login-open { min-height: 500px; }
 .container { padding: 12px; }
 
 /* ---------- header ---------- */

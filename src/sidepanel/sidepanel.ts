@@ -1,3 +1,5 @@
+import { openLoginModal } from '../shared/login.js';
+
 interface RuntimeResponse {
   ok?: boolean;
   error?: string;
@@ -38,26 +40,41 @@ document.addEventListener('DOMContentLoaded', () => {
     return res as T;
   }
 
-  // Sign-in and account management live on their own pages now:
-  // signin.html -> (after login) -> dashboard.html
-  accountBtn.addEventListener('click', async () => {
-    const res = await sendMessage<{ ok?: boolean; user?: AuthUser | null }>({ type: 'AUTH_STATE' });
-    const page = res?.ok && res.user ? 'dashboard.html' : 'signin.html';
-    await chrome.tabs.create({ url: chrome.runtime.getURL(`auth/${page}`) });
-  });
+  // Account: logged in → dashboard tab; logged out → Login modal in place.
+  let signedInUser: AuthUser | null = null;
 
-  // Reflect signed-in state in the header button without embedding any auth UI.
-  void sendMessage<{ ok?: boolean; user?: AuthUser | null }>({ type: 'AUTH_STATE' }).then((res) => {
-    const user = res?.ok ? res.user ?? null : null;
+  function applyAccountState(user: AuthUser | null): void {
+    signedInUser = user;
     if (user) {
       accountBtn.textContent = (user.email || '?').trim().charAt(0).toUpperCase() || '?';
       accountBtn.classList.add('signed-in');
       accountBtn.title = `${user.email} — open dashboard`;
     } else {
-      accountBtn.textContent = 'Sign in';
-      accountBtn.title = 'Sign in to sync your history';
+      accountBtn.textContent = 'Login';
+      accountBtn.classList.remove('signed-in');
+      accountBtn.title = 'Login to sync your history';
     }
+  }
+
+  accountBtn.addEventListener('click', async () => {
+    if (signedInUser) {
+      await chrome.tabs.create({ url: chrome.runtime.getURL('auth/dashboard.html') });
+      return;
+    }
+    openLoginModal({
+      onSignedIn: (user) => {
+        applyAccountState(user);
+        // Merge the cloud copy straight away so the list matches the dashboard.
+        void sendMessage({ type: 'SYNC_HISTORY' })
+          .then(() => loadHistory())
+          .catch(() => {});
+      },
+    });
   });
+
+  void sendMessage<{ ok?: boolean; user?: AuthUser | null }>({ type: 'AUTH_STATE' }).then((res) =>
+    applyAccountState(res?.ok ? res.user ?? null : null),
+  );
 
   async function loadHistory(): Promise<void> {
     const res = await sendMessage<{ ok?: boolean; history?: OCRHistoryEntry[] }>({ type: 'GET_HISTORY' });
