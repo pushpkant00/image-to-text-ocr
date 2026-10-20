@@ -7,3 +7,4 @@ firebase-secrets.json
 *.crx
 .DS_Store
 Thumbs.db
+release/

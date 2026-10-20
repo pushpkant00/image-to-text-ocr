@@ -1,5 +1,13 @@
 import { cleanText } from '../ocr/text-detector.js';
 import {
+  DEFAULT_VISION_MODEL,
+  VISION_MODELS,
+  modelValue,
+  parseVisionModel,
+  testVisionKey,
+  type VisionProvider,
+} from '../ocr/vision.js';
+import {
   getAuthState,
   signInWithGoogle,
   sendLoginEmail,
@@ -14,8 +22,11 @@ import {
 } from './firebase.js';
 import { isFirebaseConfigured } from '../shared/firebase-config.js';
 
+const DEFAULT_MODEL_VALUE = modelValue('google', DEFAULT_VISION_MODEL);
+
 const DEFAULT_SETTINGS: OCRSettings = {
   language: 'eng',
+  visionModel: DEFAULT_MODEL_VALUE,
   removeLineBreaks: true,
   mergeSpaces: true,
   showResultCard: true,
@@ -30,13 +41,54 @@ function errorMessage(err: unknown): string {
 // ---------- storage helpers (settings in sync, history in local) ----------
 async function getSettings(): Promise<OCRSettings> {
   const s = await chrome.storage.sync.get<SyncStorage>(DEFAULT_SETTINGS);
-  return { ...DEFAULT_SETTINGS, ...s };
+  const settings = { ...DEFAULT_SETTINGS, ...s };
+  const parsed = parseVisionModel(settings.visionModel);
+  let normalized = modelValue(parsed.provider, parsed.model);
+  // Retired Google models (3.7/3.8 Flash reject minimal thinking and stall for
+  // over a minute) fall back to the fast default instead of failing.
+  if (parsed.provider === 'google' && !(VISION_MODELS as readonly string[]).includes(parsed.model)) {
+    normalized = DEFAULT_MODEL_VALUE;
+  }
+  if (normalized !== settings.visionModel) {
+    settings.visionModel = normalized;
+    chrome.storage.sync.set({ visionModel: normalized }).catch(() => {});
+  }
+  return settings;
 }
 
 async function saveHistoryEntry(entry: OCRHistoryEntry): Promise<void> {
   const { history = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });
   history.unshift(entry);
   await chrome.storage.local.set({ history: history.slice(0, 100) });
+}
+
+// ---------- OCR credentials ----------
+/**
+ * The offscreen document never reads settings itself — the background resolves
+ * the user's Gemini key and passes it down with the payload.
+ *
+ * Images go straight from this extension to Google; there is no backend. Users
+ * supply their own API key (free tier from aistudio.google.com/apikey).
+ */
+interface EngineConfig {
+  apiKey: string;
+  model: string;
+  provider: VisionProvider;
+}
+
+async function getVisionKey(provider: VisionProvider = 'google'): Promise<string> {
+  const storageKey = provider === 'openrouter' ? 'openrouterApiKey' : 'visionApiKey';
+  const stored = await chrome.storage.local.get<LocalStorage>({ [storageKey]: '' });
+  return String(stored[storageKey] || '').trim();
+}
+
+async function resolveEngine(settings: OCRSettings): Promise<EngineConfig> {
+  const parsed = parseVisionModel(settings.visionModel);
+  return {
+    apiKey: await getVisionKey(parsed.provider),
+    model: parsed.model,
+    provider: parsed.provider,
+  };
 }
 
 // ---------- offscreen ----------
@@ -63,7 +115,7 @@ async function ensureOffscreen(): Promise<void> {
       .createDocument({
         url: OFFSCREEN_URL,
         reasons: ['WORKERS', 'CLIPBOARD'],
-        justification: 'Run Tesseract.js OCR and crop screenshots off the main thread',
+        justification: 'Render PDF pages with pdf.js workers and crop screenshots off the main thread',
       })
       .catch((e: unknown) => {
         // Lost a race with another call — document exists, that's fine.
@@ -101,7 +153,8 @@ async function sendViaOffscreen<T>(type: string, payload: unknown): Promise<T> {
 }
 
 async function ocrViaOffscreen(payload: OcrRunPayload): Promise<RawOcrResult> {
-  return sendViaOffscreen<RawOcrResult>('OCR_RUN', payload);
+  const engine = await resolveEngine(await getSettings());
+  return sendViaOffscreen<RawOcrResult>('OCR_RUN', { ...payload, ...engine });
 }
 
 async function fetchAsDataUrl(url: string): Promise<string> {
@@ -127,7 +180,6 @@ async function processResult(
   const entry: OCRHistoryEntry = {
     id: crypto.randomUUID(),
     text,
-    confidence: Math.round(raw.confidence || 0),
     timestamp: Date.now(),
     language: settings.language,
     ...extra,
@@ -162,22 +214,31 @@ async function ocrSelection({
   area,
   dpr,
   language,
+  tabId,
+  requestId,
 }: {
   windowId?: number;
   area: SelectionArea;
   dpr?: number;
   language?: string;
+  tabId?: number;
+  requestId?: string;
 }): Promise<OCRHistoryEntry> {
   const settings = await getSettings();
+  // Capture as JPEG: Chrome encodes it faster than PNG and the bytes never
+  // leave the extension anyway (the crop is re-encoded before upload).
+  const capture = { format: 'jpeg' as const, quality: 92 };
   const screenshot =
     windowId === undefined
-      ? await chrome.tabs.captureVisibleTab({ format: 'png' })
-      : await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
+      ? await chrome.tabs.captureVisibleTab(capture)
+      : await chrome.tabs.captureVisibleTab(windowId, capture);
   const raw = await ocrViaOffscreen({
     imageData: screenshot,
     area,
     language: language || settings.language,
     dpr: dpr || 1,
+    tabId,
+    requestId,
   });
   if (raw?.error) throw new Error(raw.error);
   return await processResult(raw, settings, { area, language: language || settings.language });
@@ -192,6 +253,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   });
   const cur = await chrome.storage.sync.get<SyncStorage>(DEFAULT_SETTINGS);
   await chrome.storage.sync.set({ ...DEFAULT_SETTINGS, ...cur });
+  void ensureOffscreen();
 });
 
 // ---------- right-click on an image ----------
@@ -244,6 +306,9 @@ interface TriggerResult {
 
 async function triggerSelection(tab?: chrome.tabs.Tab): Promise<TriggerResult> {
   if (!tab?.id) return { ok: false, error: 'No active tab' };
+  // Warm the offscreen document while the user is still dragging, so the first
+  // OCR request doesn't pay for loading pdf.js + the vision module.
+  void ensureOffscreen();
   try {
     await chrome.tabs.sendMessage(tab.id, { type: 'START_SELECTION' });
     return { ok: true };
@@ -285,6 +350,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           area: msg.area,
           dpr: msg.dpr,
           language: msg.language,
+          tabId: tab?.id,
+          requestId: msg.requestId,
         });
         sendResponse({ ok: true, entry });
         const settings = await getSettings();
@@ -314,6 +381,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await chrome.storage.sync.set(msg.settings || {});
         sendResponse({ ok: true });
         break;
+      case 'GET_VISION_KEY':
+        sendResponse({ ok: true, apiKey: await getVisionKey(msg.provider) });
+        break;
+      case 'SAVE_VISION_KEY': {
+        const apiKey = (msg.apiKey || '').trim();
+        if (!apiKey) throw new Error('API key is empty.');
+        const storageKey = msg.provider === 'openrouter' ? 'openrouterApiKey' : 'visionApiKey';
+        await chrome.storage.local.set({ [storageKey]: apiKey });
+        sendResponse({ ok: true });
+        break;
+      }
+      case 'CLEAR_VISION_KEY': {
+        const storageKey = msg.provider === 'openrouter' ? 'openrouterApiKey' : 'visionApiKey';
+        await chrome.storage.local.remove(storageKey);
+        sendResponse({ ok: true });
+        break;
+      }
+      case 'OPEN_SETTINGS':
+        await chrome.tabs.create({ url: chrome.runtime.getURL('auth/settings.html') });
+        sendResponse({ ok: true });
+        break;
+      case 'TEST_VISION_KEY': {
+        const settings = await getSettings();
+        const parsed = msg.model
+          ? parseVisionModel(msg.model)
+          : parseVisionModel(settings.visionModel);
+        const provider = msg.provider || parsed.provider;
+        const apiKey = (msg.apiKey || '').trim() || (await getVisionKey(provider));
+        const info = await testVisionKey(apiKey, parsed.model, undefined, provider);
+        sendResponse({ ok: true, ms: info.ms, note: info.note, exhausted: info.exhausted });
+        break;
+      }
       case 'GET_HISTORY': {
         const { history: local = [] } = await chrome.storage.local.get<LocalStorage>({ history: [] });
         let history = local;
@@ -381,9 +480,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         break;
       case 'PDF_EXTRACT': {
         // from popup: { pdfData, language? } — offscreen does the work
+        const engine = await resolveEngine(await getSettings());
         const res = await sendViaOffscreen<PdfExtractResponse | undefined>('PDF_RUN', {
           pdfData: msg.pdfData,
           language: msg.language,
+          ...engine,
         });
         if (!res) throw new Error('No response from the PDF engine');
         if (res.error) throw new Error(res.error);
@@ -405,6 +506,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const { lastConvert = null } = await chrome.storage.local.get<LocalStorage>({ lastConvert: null });
         await chrome.storage.local.set({ lastConvert: null });
         sendResponse({ ok: true, lastConvert });
+        break;
+      }
+      case 'OCR_PARTIAL': {
+        // relayed from the offscreen document to the tab that asked for OCR
+        if (msg.tabId) {
+          chrome.tabs
+            .sendMessage(msg.tabId, {
+              type: 'OCR_PARTIAL',
+              requestId: msg.requestId,
+              text: msg.text,
+            })
+            .catch(() => {});
+        }
+        sendResponse({ ok: true });
         break;
       }
       case 'CONVERT_PROGRESS':

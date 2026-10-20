@@ -81,17 +81,6 @@
   height: 13px;
   display: block;
 }
-.ocr-result-confidence {
-  padding: 1px 6px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.ocr-result-confidence.is-high { background: #dff6dd; color: #0b6a0b; }
-.ocr-result-confidence.is-mid { background: #fff4ce; color: #7a5200; }
-.ocr-result-confidence.is-low { background: #fde7e9; color: #a4262c; }
 .ocr-result-close {
   background: none;
   border: none;

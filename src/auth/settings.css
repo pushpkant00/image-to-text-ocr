@@ -6,7 +6,7 @@
   justify-content: space-between;
   gap: 18px;
   padding: 14px 0;
-  border-top: 1px solid #eef1f6;
+  border-top: 1px solid var(--line);
 }
 .panel .setting-row:first-of-type { border-top: none; padding-top: 0; }
 .panel .setting-row:last-child { padding-bottom: 0; }
@@ -27,11 +27,12 @@
 .setting-control {
   flex: none;
   padding: 9px 11px;
-  border: 1px solid #c9c9c9;
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   font-size: 13.5px;
   font-family: inherit;
-  background: #fff;
+  background: var(--control-bg);
+  color: var(--text);
 }
 .setting-control:focus {
   outline: none;
@@ -48,7 +49,7 @@
   height: 22px;
   border: none;
   border-radius: 999px;
-  background: #c4c4c4;
+  background: var(--control-border);
   position: relative;
   cursor: pointer;
   margin: 0;
@@ -70,11 +71,45 @@
 .switch:checked::after { transform: translateX(18px); }
 .switch:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
-.save-status { font-size: 12.5px; font-weight: 650; color: #1e7a2e; }
+.save-status { font-size: 12.5px; font-weight: 650; color: var(--success); }
 .save-status.error { color: var(--danger); }
 
+/* ---------- cloud OCR ---------- */
+.key-section {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.key-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+.key-input {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-family: inherit;
+  background: var(--control-bg);
+  color: var(--text);
+}
+.key-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.16);
+}
+.key-help { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.key-help a { color: var(--brand); }
+#key-status { margin-top: 8px; }
+#key-status.success { color: var(--success); }
+#key-status.error { color: var(--danger); }
+
 /* ---------- danger zone ---------- */
-.danger-zone { border-color: #f0c9cb; }
+.danger-zone { border-color: var(--danger-line); }
 .danger-row {
   display: flex;
   align-items: center;
@@ -86,7 +121,7 @@
 .delete-confirm {
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid #f3dcdd;
+  border-top: 1px solid var(--danger-line);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -94,10 +129,12 @@
 .delete-confirm input {
   max-width: 340px;
   padding: 9px 11px;
-  border: 1px solid #c9c9c9;
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   font-size: 13.5px;
   font-family: inherit;
+  background: var(--control-bg);
+  color: var(--text);
 }
 .delete-confirm input:focus {
   outline: none;

@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="popup.css">
   <link rel="stylesheet" href="../shared/login.css">
+  <script src="../shared/theme-init.js"></script>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <h1>Image to Text OCR</h1>
       <div class="header-actions">
+        <button id="theme-toggle" class="header-icon-btn" type="button" title="Toggle dark mode" aria-label="Toggle dark mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
         <button id="settings-btn" class="header-icon-btn" type="button" title="Settings" aria-label="Settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
@@ -40,7 +42,6 @@
       <div id="last-result" class="result-box hidden">
         <div class="result-head">
           <span class="result-title">Last Result</span>
-          <span id="last-accuracy" class="accuracy-badge"></span>
         </div>
         <div id="last-text" class="result-line"></div>
         <button id="copy-last-btn" class="result-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span></button>
@@ -84,7 +85,7 @@
       <div id="conv-result" class="result-box hidden">
         <div class="result-head">
           <span class="result-title">Result</span>
-          <span id="conv-result-meta" class="accuracy-badge is-high"></span>
+          <span id="conv-result-meta" class="meta-badge"></span>
         </div>
         <div id="conv-result-text" class="conv-result-text"></div>
         <div class="result-actions">

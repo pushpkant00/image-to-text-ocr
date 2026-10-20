@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard — Image to Text OCR</title>
   <link rel="stylesheet" href="dashboard.css">
+  <script src="../shared/theme-init.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -18,10 +19,13 @@
         <a href="dashboard.html" class="topnav-link active" aria-current="page">History</a>
         <a href="settings.html" class="topnav-link">Settings</a>
       </nav>
-      <div class="user-menu">
-        <span id="avatar" class="avatar">?</span>
-        <span id="user-email" class="user-email"></span>
-        <button id="sign-out-btn" class="btn ghost">Sign out</button>
+      <div class="topbar-right">
+        <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Toggle dark mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+        <div class="user-menu">
+          <span id="avatar" class="avatar">?</span>
+          <span id="user-email" class="user-email"></span>
+          <button id="sign-out-btn" class="btn ghost">Sign out</button>
+        </div>
       </div>
     </div>
   </header>

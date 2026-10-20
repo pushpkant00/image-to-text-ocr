@@ -13,6 +13,9 @@ interface AccountResponse {
 interface SimpleResponse {
   ok?: boolean;
   error?: string;
+  ms?: number;
+  note?: string;
+  exhausted?: boolean;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,6 +31,124 @@ document.addEventListener('DOMContentLoaded', () => {
   const showResultCard = q<HTMLInputElement>('show-result-card');
   const openHistory = q<HTMLInputElement>('open-history');
   const autoDownload = q<HTMLInputElement>('auto-download');
+
+  // ---------- cloud OCR ----------
+  const visionModelSelect = q<HTMLSelectElement>('vision-model');
+  const openRouterModels = document.getElementById('openrouter-models');
+  const keyLabel = q<HTMLElement>('vision-key-label');
+  const keyHelp = q<HTMLElement>('vision-key-help');
+  const keyLink = q<HTMLElement>('vision-key-link');
+  const keyInput = q<HTMLInputElement>('vision-key');
+  const keyToggle = q<HTMLButtonElement>('key-toggle');
+  const keySave = q<HTMLButtonElement>('key-save');
+  const keyTest = q<HTMLButtonElement>('key-test');
+  const keyClear = q<HTMLButtonElement>('key-clear');
+  const keyStatus = q<HTMLElement>('key-status');
+
+  interface VisionKeyResponse {
+    ok?: boolean;
+    apiKey?: string;
+    error?: string;
+  }
+
+  let hasSavedKey = false;
+
+  type Provider = 'google' | 'openrouter';
+
+  function selectedProvider(): Provider {
+    return visionModelSelect.value.startsWith('openrouter:') ? 'openrouter' : 'google';
+  }
+
+  function providerCopy(provider: Provider): {
+    label: string;
+    help: string;
+    link: string;
+    placeholder: string;
+  } {
+    if (provider === 'openrouter') {
+      return {
+        label: 'OpenRouter API key',
+        help: 'Stored on this device only and sent straight to OpenRouter. Free models allow about 20 requests a minute and 50 a day.',
+        link: 'Get a free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">openrouter.ai/keys</a>.',
+        placeholder: 'sk-or-v1…',
+      };
+    }
+    return {
+      label: 'Gemini API key',
+      help: 'Stored on this device only and sent straight to Google. Never synced, never sent to our server.',
+      link: 'Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>.',
+      placeholder: 'AIza…',
+    };
+  }
+
+  function setKeyStatus(message: string, kind: '' | 'success' | 'error' = ''): void {
+    keyStatus.textContent = message;
+    keyStatus.classList.remove('hidden', 'success', 'error');
+    if (!message) {
+      keyStatus.classList.add('hidden');
+      return;
+    }
+    if (kind) keyStatus.classList.add(kind);
+  }
+
+  function refreshKeyUi(): void {
+    const copy = providerCopy(selectedProvider());
+    keyLabel.textContent = copy.label;
+    keyHelp.textContent = copy.help;
+    keyLink.innerHTML = copy.link;
+    keyClear.classList.toggle('hidden', !hasSavedKey);
+    keyInput.placeholder = hasSavedKey ? 'Saved key — paste a new one to replace' : copy.placeholder;
+    keyInput.value = '';
+  }
+
+  async function loadKey(): Promise<void> {
+    try {
+      const res = (await chrome.runtime.sendMessage({
+        type: 'GET_VISION_KEY',
+        provider: selectedProvider(),
+      })) as VisionKeyResponse;
+      hasSavedKey = Boolean(res?.apiKey);
+    } catch {
+      /* leave the UI in its default state */
+    }
+    refreshKeyUi();
+  }
+
+  /** Fill the OpenRouter group with the free image models it serves today. */
+  async function loadOpenRouterModels(): Promise<void> {
+    if (!openRouterModels) return;
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/models', {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return;
+      const body = (await res.json()) as {
+        data?: {
+          id?: string;
+          name?: string;
+          pricing?: { prompt?: string; completion?: string };
+          architecture?: { input_modalities?: string[] };
+        }[];
+      };
+      const free = (body.data || []).filter((m) => {
+        const isFree =
+          m.id?.endsWith(':free') &&
+          (m.pricing?.prompt === '0' || m.pricing?.prompt === '0.0') &&
+          (m.pricing?.completion === '0' || m.pricing?.completion === '0.0');
+        return Boolean(isFree && (m.architecture?.input_modalities || []).includes('image'));
+      });
+      if (!free.length) return;
+      openRouterModels.textContent = '';
+      for (const model of free) {
+        const option = document.createElement('option');
+        option.value = `openrouter:${model.id}`;
+        option.textContent = model.name || model.id || '';
+        openRouterModels.appendChild(option);
+      }
+    } catch {
+      /* offline or blocked: keep the built-in fallback list */
+    }
+  }
 
   let saveTimer: number | undefined;
 
@@ -46,6 +167,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = (await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' })) as SettingsResponse;
       const s: Partial<OCRSettings> = res?.settings || {};
       languageSelect.value = s.language || 'eng';
+      const storedModel = s.visionModel || '';
+      const knownModel = Array.from(visionModelSelect.options).some((o) => o.value === storedModel);
+      if (!knownModel && storedModel.startsWith('openrouter:')) {
+        // A model that dropped off the live list: keep showing it so the choice
+        // on screen matches what OCR will actually use.
+        const option = document.createElement('option');
+        option.value = storedModel;
+        option.textContent = `${storedModel.slice('openrouter:'.length)} (currently unavailable)`;
+        (openRouterModels || visionModelSelect).appendChild(option);
+      }
+      visionModelSelect.value =
+        knownModel || storedModel.startsWith('openrouter:') ? storedModel : 'google:gemini-3.5-flash';
       removeBreaks.checked = s.removeLineBreaks !== false;
       mergeSpaces.checked = s.mergeSpaces !== false;
       showResultCard.checked = s.showResultCard !== false;
@@ -54,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch {
       /* keep the defaults already rendered */
     }
+    await loadKey();
   }
 
   async function save(control: HTMLElement, settings: Partial<OCRSettings>): Promise<void> {
@@ -71,6 +205,114 @@ document.addEventListener('DOMContentLoaded', () => {
   showResultCard.addEventListener('change', () => save(showResultCard, { showResultCard: showResultCard.checked }));
   openHistory.addEventListener('change', () => save(openHistory, { openHistoryAfterOcr: openHistory.checked }));
   autoDownload.addEventListener('change', () => save(autoDownload, { autoDownload: autoDownload.checked }));
+
+  visionModelSelect.addEventListener('change', async () => {
+    setKeyStatus('');
+    await save(visionModelSelect, { visionModel: visionModelSelect.value });
+    await loadKey();
+  });
+
+  keyToggle.addEventListener('click', () => {
+    const show = keyInput.type === 'password';
+    keyInput.type = show ? 'text' : 'password';
+    keyToggle.textContent = show ? 'Hide' : 'Show';
+  });
+
+  async function saveKey(announce = true): Promise<boolean> {
+    const apiKey = keyInput.value.trim();
+    if (!apiKey) {
+      if (announce) {
+        setKeyStatus('Paste your key first.', 'error');
+        keyInput.focus();
+      }
+      return false;
+    }
+    keySave.disabled = true;
+    try {
+      const res = (await chrome.runtime.sendMessage({
+        type: 'SAVE_VISION_KEY',
+        apiKey,
+        provider: selectedProvider(),
+      })) as SimpleResponse;
+      if (res?.ok) {
+        hasSavedKey = true;
+        refreshKeyUi();
+        setKeyStatus('Key saved on this device.', 'success');
+        return true;
+      }
+      setKeyStatus(res?.error || "Couldn't save the key.", 'error');
+    } catch {
+      setKeyStatus("Couldn't save the key.", 'error');
+    } finally {
+      keySave.disabled = false;
+    }
+    return false;
+  }
+
+  async function testKey(): Promise<void> {
+    const typed = keyInput.value.trim();
+    if (!typed && !hasSavedKey) {
+      setKeyStatus('Save a key first.', 'error');
+      return;
+    }
+    keyTest.disabled = true;
+    setKeyStatus('Testing…');
+    try {
+      const res = (await chrome.runtime.sendMessage({
+        type: 'TEST_VISION_KEY',
+        apiKey: typed || undefined,
+        model: visionModelSelect.value,
+        provider: selectedProvider(),
+      })) as SimpleResponse;
+      if (res?.ok) {
+        if (res.exhausted) {
+          setKeyStatus(
+            `Key is valid, but ${res.note}. Free requests resume at 00:00 UTC — pick a Gemini model to keep working now.`,
+            'error',
+          );
+        } else if (res.note) {
+          setKeyStatus(`Key works — ${res.note}.`, 'success');
+        } else {
+          const seconds = typeof res.ms === 'number' ? ` in ${(res.ms / 1000).toFixed(1)}s` : '';
+          setKeyStatus(`Key works — the model replied${seconds}.`, 'success');
+        }
+      } else setKeyStatus(res?.error || 'The model rejected this key.', 'error');
+    } catch (err) {
+      setKeyStatus(err instanceof Error ? err.message : 'Test failed.', 'error');
+    } finally {
+      keyTest.disabled = false;
+    }
+  }
+
+  keySave.addEventListener('click', () => void saveKey());
+  keyTest.addEventListener('click', () => void testKey());
+
+  // Enter saves; pasting a key saves and verifies it, so a key can't sit
+  // unsaved in the box while OCR keeps reporting "no key configured".
+  keyInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      void saveKey();
+    }
+  });
+  keyInput.addEventListener('paste', () => {
+    // Save automatically so a key can't sit unsaved while OCR reports "no key";
+    // leave the Test click to the user.
+    window.setTimeout(() => {
+      if (keyInput.value.trim().length > 20) void saveKey(false);
+    }, 30);
+  });
+
+  keyClear.addEventListener('click', async () => {
+    try {
+      await chrome.runtime.sendMessage({ type: 'CLEAR_VISION_KEY', provider: selectedProvider() });
+      hasSavedKey = false;
+      refreshKeyUi();
+      setKeyStatus('Key removed.', '');
+    } catch {
+      setKeyStatus("Couldn't remove the key.", 'error');
+    }
+  });
 
   // ---------- danger zone (account deletion) ----------
   const dangerZone = q<HTMLElement>('danger-zone');
@@ -165,6 +407,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') void doDeleteAccount();
   });
 
-  void load();
+  window.__ocrTheme?.mount(document.getElementById('theme-toggle'));
+
+  void (async () => {
+    await loadOpenRouterModels();
+    await load();
+  })();
   void loadAccount();
 });

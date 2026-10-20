@@ -632,7 +632,6 @@ function fromFields(fields?: FieldMap): Record<string, JsonValue> {
 function entryFields(entry: OCRHistoryEntry): FieldMap {
   const fields = toFields({
     text: entry.text || '',
-    confidence: entry.confidence || 0,
     timestamp: entry.timestamp || Date.now(),
     language: entry.language || 'eng',
   });
@@ -651,7 +650,6 @@ function parseDoc(doc: FirestoreDoc): OCRHistoryEntry | null {
   const entry: OCRHistoryEntry = {
     id,
     text,
-    confidence: Number(fields.confidence) || 0,
     timestamp: Number(fields.timestamp) || 0,
     language: typeof fields.language === 'string' ? fields.language : 'eng',
   };

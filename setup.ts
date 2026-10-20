@@ -1,25 +1,21 @@
-// One-time setup: bundles the on-device OCR assets into libs/.
+// One-time setup: bundles the vendored page assets into libs/.
 // Run after `npm install`:
 //
 //   npm run setup
 //
 // What it does:
-//  1. Copies tesseract.min.js + worker.min.js from the npm package
-//  2. Copies the Tesseract core (WASM) files for SIMD + non-SIMD devices
-//  3. Downloads the English traineddata (~3 MB) for fully offline OCR
-//  4. Copies pdf.js (UMD build + worker) for PDF -> text/Word conversion
+//  1. Copies pdf.js (UMD build + worker) for PDF -> text/Word conversion
 // Then build with: npm run build
+//
+// OCR itself runs in the cloud (Gemini vision), so there are no model assets
+// to vendor.
 
-import { cpSync, mkdirSync, existsSync, writeFileSync } from 'fs';
+import { cpSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const root = dirname(fileURLToPath(import.meta.url));
-const libs = join(root, 'libs', 'tesseract');
-const langDir = join(libs, 'lang-data');
 const pdfLibs = join(root, 'libs', 'pdfjs');
-
-const ENG_URL = 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz';
 
 function need(dir: string, hint?: string): void {
   if (!existsSync(dir)) {
@@ -28,44 +24,9 @@ function need(dir: string, hint?: string): void {
   }
 }
 
-need(join(root, 'node_modules', 'tesseract.js'), '');
-need(join(root, 'node_modules', 'tesseract.js-core'), '');
 need(join(root, 'node_modules', 'pdfjs-dist'), '');
 
-mkdirSync(langDir, { recursive: true });
-
-// 1. JS bundles
-for (const f of ['tesseract.min.js', 'worker.min.js', 'tesseract.esm.min.js']) {
-  cpSync(join(root, 'node_modules', 'tesseract.js', 'dist', f), join(libs, f));
-  console.log('bundled', f);
-}
-
-// 2. WASM core (SIMD default + non-SIMD fallback)
-const core = join(root, 'node_modules', 'tesseract.js-core');
-for (const f of [
-  'tesseract-core-simd-lstm.wasm.js',
-  'tesseract-core-simd-lstm.wasm',
-  'tesseract-core-lstm.wasm.js',
-  'tesseract-core-lstm.wasm',
-]) {
-  cpSync(join(core, f), join(libs, f));
-  console.log('bundled', f);
-}
-
-// 3. English language data (download once, works offline afterwards)
-const dest = join(langDir, 'eng.traineddata.gz');
-if (existsSync(dest)) {
-  console.log('eng.traineddata.gz already present, skipping download');
-} else {
-  console.log('downloading eng.traineddata.gz …');
-  const res = await fetch(ENG_URL);
-  if (!res.ok) throw new Error(`download failed: HTTP ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  writeFileSync(dest, buf);
-  console.log(`saved eng.traineddata.gz (${(buf.length / 1024 / 1024).toFixed(1)} MB)`);
-}
-
-// 4. pdf.js (UMD build + worker) for PDF conversion — version-locked by package.json
+// pdf.js (UMD build + worker) for PDF conversion — version-locked by package.json
 mkdirSync(pdfLibs, { recursive: true });
 for (const f of ['pdf.min.js', 'pdf.worker.min.js']) {
   cpSync(join(root, 'node_modules', 'pdfjs-dist', 'build', f), join(pdfLibs, f));

@@ -1,5 +1,5 @@
 // Ambient types for the vendored pdf.js UMD build (libs/pdfjs/pdf.min.js),
-// loaded as a classic script by offscreen.html — mirrors tesseract.d.ts.
+// loaded as a classic script by offscreen.html.
 
 interface PdfjsViewport {
   width: number;
@@ -35,5 +35,9 @@ interface PdfjsDocument {
 
 declare const pdfjsLib: {
   GlobalWorkerOptions: { workerSrc: string };
-  getDocument(src: { data: ArrayBuffer | Uint8Array }): { promise: Promise<PdfjsDocument> };
+  getDocument(src: {
+    data: ArrayBuffer | Uint8Array;
+    /** Keep pdf.js from building functions at runtime (extension CSP has no unsafe-eval). */
+    isEvalSupported?: boolean;
+  }): { promise: Promise<PdfjsDocument> };
 };

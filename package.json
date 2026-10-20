@@ -1,20 +1,20 @@
 {
   "name": "ocr-extension",
   "version": "1.0.0",
-  "description": "Chrome extension to copy text from images using local OCR",
+  "description": "Extract text from images and PDFs with your own Gemini or OpenRouter API key.",
   "type": "module",
   "engines": {
     "node": ">=23.6"
   },
   "scripts": {
     "setup": "node setup.ts",
-    "build": "node build.ts && tsc && node inject-config.ts && node -e \"console.log('Build complete -> dist/  ·  Load unpacked: chrome://extensions -> dist/')\"",
+    "build": "node build.ts && tsc && node inject-config.ts && node -e \"console.log('Build complete -> dist/  \u00b7  Load unpacked: chrome://extensions -> dist/')\"",
     "icons": "node icons/generate.ts",
-    "lint": "tsc --noEmit && tsc -p tsconfig.tools.json"
+    "lint": "tsc --noEmit && tsc -p tsconfig.tools.json",
+    "package": "npm run build && node package.ts"
   },
   "dependencies": {
-    "pdfjs-dist": "^3.11.174",
-    "tesseract.js": "^5.1.1"
+    "pdfjs-dist": "^3.11.174"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.4",

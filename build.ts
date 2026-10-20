@@ -24,7 +24,7 @@ function copyAssets(from: string, to: string): void {
     const src = join(from, entry.name);
     const dst = join(to, entry.name);
     if (entry.isDirectory()) copyAssets(src, dst);
-    else if (/\.(html|css)$/.test(entry.name)) cpSync(src, dst);
+    else if (/\.(html|css|js)$/.test(entry.name)) cpSync(src, dst);
   }
 }
 

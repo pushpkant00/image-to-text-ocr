@@ -1,3 +1,13 @@
+interface OcrThemeApi {
+  mount(button: HTMLElement | null): void;
+  apply(theme: 'light' | 'dark'): void;
+  current(): 'light' | 'dark';
+}
+
+interface Window {
+  __ocrTheme?: OcrThemeApi;
+}
+
 interface SelectionArea {
   x: number;
   y: number;
@@ -8,14 +18,15 @@ interface SelectionArea {
 interface OCRHistoryEntry {
   id: string;
   text: string;
-  confidence: number;
   timestamp: number;
   language: string;
   area?: SelectionArea;
 }
 
+/** OCR runs in the cloud with the user's own Gemini API key. */
 interface OCRSettings {
   language: string;
+  visionModel: string;
   removeLineBreaks: boolean;
   mergeSpaces: boolean;
   showResultCard: boolean;
@@ -25,21 +36,32 @@ interface OCRSettings {
 
 interface RawOcrResult {
   text?: string;
-  confidence?: number;
   error?: string;
 }
+
+type VisionProviderId = 'google' | 'openrouter';
 
 interface OcrRunPayload {
   imageData: string;
   area?: SelectionArea;
   language?: string;
   dpr?: number;
+  /** Resolved by the background, not by the caller. */
+  model?: string;
+  provider?: VisionProviderId;
+  apiKey?: string;
+  /** Where streamed partial text should be delivered (image captures only). */
+  tabId?: number;
+  requestId?: string;
 }
 
 /** Background <-> offscreen payload/response for PDF text extraction. */
 interface PdfRunPayload {
   pdfData: ArrayBuffer;
   language?: string;
+  model?: string;
+  provider?: VisionProviderId;
+  apiKey?: string;
 }
 
 interface PdfExtractResponse {
@@ -94,13 +116,18 @@ interface LocalStorage {
   lastAccountUid?: string | null;
   /** Last completed PDF extraction (cleared once read by the popup). */
   lastConvert?: LastConvert | null;
+  /** Gemini API key. Local only — never synced to the account. */
+  visionApiKey?: string;
+  /** OpenRouter API key. Local only — never synced to the account. */
+  openrouterApiKey?: string;
 }
 
 interface SyncStorage extends OCRSettings {}
 
 // ---------- runtime messages ----------
 type BackgroundRequest =
-  | { type: 'OCR_CAPTURE'; area: SelectionArea; dpr: number; language?: string }
+  | { type: 'OCR_CAPTURE'; area: SelectionArea; dpr: number; language?: string; requestId?: string }
+  | { type: 'OCR_PARTIAL'; tabId?: number; requestId?: string; text: string }
   | { type: 'OCR_IMAGE_DATA'; imageData: string; language?: string }
   | { type: 'GET_SETTINGS' }
   | { type: 'SAVE_SETTINGS'; settings: Partial<OCRSettings> }
@@ -117,12 +144,18 @@ type BackgroundRequest =
   | { type: 'PDF_EXTRACT'; pdfData: ArrayBuffer; language?: string; mode?: string; name?: string }
   | { type: 'GET_LAST_CONVERT' }
   | { type: 'CONVERT_PROGRESS'; page: number; total: number; ocr: boolean }
-  | { type: 'OCR_RUN'; payload: OcrRunPayload };
+  | { type: 'OCR_RUN'; payload: OcrRunPayload }
+  | { type: 'GET_VISION_KEY'; provider?: VisionProviderId }
+  | { type: 'SAVE_VISION_KEY'; apiKey: string; provider?: VisionProviderId }
+  | { type: 'CLEAR_VISION_KEY'; provider?: VisionProviderId }
+  | { type: 'TEST_VISION_KEY'; apiKey?: string; model?: string; provider?: VisionProviderId }
+  | { type: 'OPEN_SETTINGS' };
 
 type ContentRequest =
   | { type: 'START_SELECTION' }
   | { type: 'OCR_DONE'; entry: OCRHistoryEntry }
-  | { type: 'OCR_FAILED'; error: string };
+  | { type: 'OCR_FAILED'; error: string }
+  | { type: 'OCR_PARTIAL'; requestId?: string; text: string };
 
 interface OkResponse {
   ok: boolean;

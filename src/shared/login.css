@@ -288,3 +288,43 @@
   .login-card *::before,
   .login-card *::after { transition: none !important; animation: none !important; }
 }
+
+
+/* ---------- dark theme (extension pages only) ---------- */
+[data-theme='dark'] .login-card {
+  --brand: #4aa8ff;
+  --brand-dark: #7cc0ff;
+  --text: #e6ebf2;
+  --muted: #9aa7b6;
+  --line: #2a3542;
+  --error: #ff8a8a;
+  background: #171f28;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+[data-theme='dark'] .login-close:hover { background: #252f3a; }
+[data-theme='dark'] .login-icon {
+  background: radial-gradient(circle at 30% 25%, #1a2a3a, #16202b);
+  border-color: #2b4a66;
+}
+[data-theme='dark'] .login-status { background: #1b242e; }
+[data-theme='dark'] .login-status.error { background: #2a1618; color: #ff8a8a; }
+[data-theme='dark'] .login-status.success { background: #14281a; color: #74d68a; }
+[data-theme='dark'] .login-status.warn { background: #2a2415; color: #ffd479; }
+[data-theme='dark'] .login-google {
+  background: #1b242e;
+  border-color: #35424f;
+  color: #e6ebf2;
+}
+[data-theme='dark'] .login-google:hover:not(:disabled) {
+  background: #212d3a;
+  border-color: #4a6076;
+}
+[data-theme='dark'] .login-google:active:not(:disabled) { background: #26333f; }
+[data-theme='dark'] .login-email-title { color: #c3cedb; }
+[data-theme='dark'] .login-input {
+  background: #101820;
+  border-color: #35424f;
+  color: #e6ebf2;
+}
+[data-theme='dark'] .login-input::placeholder { color: #7d8b9a; }

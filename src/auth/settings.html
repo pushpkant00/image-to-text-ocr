@@ -6,6 +6,7 @@
   <title>Settings — Image to Text OCR</title>
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="settings.css">
+  <script src="../shared/theme-init.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -19,10 +20,13 @@
         <a href="dashboard.html" class="topnav-link">History</a>
         <a href="settings.html" class="topnav-link active" aria-current="page">Settings</a>
       </nav>
-      <div id="user-menu" class="user-menu hidden">
-        <span id="avatar" class="avatar">?</span>
-        <span id="user-email" class="user-email"></span>
-        <button id="sign-out-btn" class="btn ghost">Sign out</button>
+      <div class="topbar-right">
+        <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Toggle dark mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+        <div id="user-menu" class="user-menu hidden">
+          <span id="avatar" class="avatar">?</span>
+          <span id="user-email" class="user-email"></span>
+          <button id="sign-out-btn" class="btn ghost">Sign out</button>
+        </div>
       </div>
     </div>
   </header>
@@ -39,10 +43,10 @@
       <div class="setting-row">
         <div class="setting-info">
           <label class="setting-label" for="language-select">Language</label>
-          <p class="setting-desc">Used for images, selections, and scanned PDFs.</p>
+          <p class="setting-desc">Hint for the model — also used for scanned PDF pages.</p>
         </div>
         <select id="language-select" class="setting-control">
-          <option value="eng" selected>English (offline)</option>
+          <option value="eng" selected>English</option>
           <option value="hin">Hindi</option>
           <option value="spa">Spanish</option>
           <option value="fra">French</option>
@@ -64,6 +68,50 @@
           <p class="setting-desc">Squeeze runs of spaces down to one.</p>
         </div>
         <input type="checkbox" id="merge-spaces" class="switch" checked>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">
+          <span class="panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 18.5a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18.4 10.6a4 4 0 0 1-.4 7.9"/><path d="M12 12v7"/><path d="M9.5 16.5 12 19l2.5-2.5"/></svg></span>
+          <h2>OCR service</h2>
+        </div>
+        <span class="save-status hidden" role="status" aria-live="polite"></span>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <label class="setting-label" for="vision-model">Model</label>
+          <p class="setting-desc">Only free models are listed. Google Gemini's free tier answers in about 2–3 seconds; OpenRouter's free models vary.</p>
+        </div>
+        <select id="vision-model" class="setting-control">
+          <optgroup label="Google Gemini — free tier">
+            <option value="google:gemini-3.5-flash">Gemini 3.5 Flash — fastest</option>
+            <option value="google:gemini-3.6-flash">Gemini 3.6 Flash</option>
+            <option value="google:gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
+          </optgroup>
+          <optgroup label="OpenRouter — free models" id="openrouter-models">
+            <option value="openrouter:nvidia/nemotron-3.5-super-vl:free">Nemotron 3.5 Super VL</option>
+            <option value="openrouter:google/gemma-4-31b-it:free">Gemma 4 31B</option>
+            <option value="openrouter:google/gemma-4-26b-a4b-it:free">Gemma 4 26B A4B</option>
+            <option value="openrouter:minimax/minimax-m3.1-flash:free">MiniMax M3.1 Flash</option>
+            <option value="openrouter:dots-studio/dots-3-note-preview:free">Dots3 Note</option>
+            <option value="openrouter:thinkingmachines/inkling-small:free">Inkling Small</option>
+          </optgroup>
+        </select>
+      </div>
+      <div id="key-section" class="key-section">
+        <label class="setting-label" for="vision-key" id="vision-key-label">Gemini API key</label>
+        <p class="setting-desc" id="vision-key-help">Stored on this device only and sent straight to Google. Never synced, never sent to our server.</p>
+        <div class="key-row">
+          <input type="password" id="vision-key" class="key-input" placeholder="AIza…" autocomplete="off" spellcheck="false">
+          <button id="key-toggle" class="btn secondary auto" type="button">Show</button>
+          <button id="key-save" class="btn secondary auto" type="button">Save</button>
+          <button id="key-test" class="btn secondary auto" type="button">Test</button>
+          <button id="key-clear" class="btn secondary auto hidden" type="button">Remove</button>
+        </div>
+        <div id="key-status" class="auth-status hidden" role="status" aria-live="polite"></div>
+        <p class="key-help" id="vision-key-link">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>.</p>
       </div>
     </section>
 

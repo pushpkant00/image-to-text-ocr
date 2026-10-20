@@ -1,28 +1,50 @@
 # Image to Text OCR — Chrome Extension
 
-Copy text out of **any image** on the web. Select a region with `Ctrl+Shift+X`, right-click an image, or paste a screenshot — the text is recognized **on your device** and shown in a result card — nothing touches your clipboard until you click **Copy**. OCR itself is fully offline; an optional account lets you sync history across devices.
+Turn anything on your screen into selectable text. Press `Ctrl+Shift+X`, drag a box over an image, chart, PDF viewer, or video frame, and the text streams into a card in about 2–4 seconds — ready to copy.
 
-![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue) ![Offline OCR](https://img.shields.io/badge/OCR-on--device-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
+OCR runs on **your own free API key** (Google Gemini, or a free vision model on OpenRouter). There is no developer server and no subscription: your browser talks straight to the provider you choose.
+
+![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue) ![BYOK](https://img.shields.io/badge/OCR-bring--your--own--key-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ## Features
 
-- **Drag-to-select OCR** — press `Ctrl+Shift+X` (or `⌘+Shift+X` on Mac), draw a box over anything: images, video frames, PDFs in the browser, charts, memes
+- **Drag-to-select OCR** — `Ctrl+Shift+X` (`⌘+Shift+X` on Mac), draw a box over anything: images, video frames, PDFs open in the browser, charts, screenshots
 - **Right-click any image** → *Extract text from this image*
-- **Popup tools** — OCR an image file or paste a screenshot straight from the clipboard (`Ctrl+V`)
-- **File converters** — a **Convert** tab in the popup with five offline conversions: *Jpg To Word* (OCR → `.docx`), *Pdf To Text* / *Pdf To Word* (pdf.js text layer, with automatic per-page OCR for scanned pages), *Text To PDF* / *Text To Word* — no uploads, no network
-- **Result card** — compact top-right card with **Preview** and **Copy** buttons (text is copied only when you click Copy)
-- **Side-panel history** — searchable, per-language filter, confidence scores, delete/clear
-- **100% offline English OCR** — Tesseract.js + language data bundled, nothing ever leaves your machine
-- **Multi-language** — English works offline; other languages download their model once on first use
-- **Optional login & cloud history** — log in from the popup or side panel (Google or an email sign-in link) to merge your history with a Firebase account across devices (off by default)
+- **Popup tools** — OCR an image file or paste a screenshot from the clipboard (`Ctrl+V`)
+- **Streaming result card** — recognized text appears live as the model writes it, with **Preview** and **Copy** (nothing is copied until you click Copy)
+- **Convert tab** — five conversions: *Jpg To Word* (OCR → `.docx`), *Pdf To Text*, *Pdf To Word* (pdf.js text layer, with per-page OCR for scanned pages), *Text To PDF*, *Text To Word*. Files are assembled locally; only OCR needs the network
+- **History** — side panel and dashboard with search, language filter, copy, and delete
+- **Optional account sync** — sign in with Google or an email link to keep history across devices. Text is encrypted (AES-256-GCM) on your device before it is stored
+- **Dark mode** — Settings, History, and the popup follow your OS theme, with a sun/moon toggle to override it
+- **Seven OCR languages** — English, Hindi, Spanish, French, German, Japanese, Chinese (Simplified), passed to the model as a hint
 
-## Install (use it)
+## OCR engine: cloud, bring your own key
 
-No build needed if you grab a built copy — otherwise build from source below, then:
+There is no bundled OCR engine and no server run by this project. Images are cropped, resized, and JPEG-encoded locally, then sent directly from your browser to the provider you select, authenticated with your key.
 
-1. Open `chrome://extensions`
-2. Enable **Developer mode** (top-right)
-3. Click **Load unpacked** → select the `dist/` folder
+| Provider | Models offered in Settings | Free tier |
+|---|---|---|
+| Google AI Studio (Gemini) | Gemini 3.5 Flash *(default, fastest)*, 3.6 Flash, 3.5 Flash Lite | Free tier from [aistudio.google.com/apikey](https://aistudio.google.com/apikey); rate-limited |
+| OpenRouter | Nemotron 3.5 Super VL, Gemma 4 31B, Gemma 4 26B A4B, MiniMax M3.1 Flash, Dots3 Note, Inkling Small *(all `:free`)* | Free models: ~20 requests/min and 50/day (1,000/day after a one-time $10 credit purchase) |
+
+- The key is stored in `chrome.storage.local` on this device only — never in `chrome.storage.sync`, never sent anywhere except that provider.
+- Settings shows the remaining OpenRouter free requests and warns when the daily limit is spent.
+- Gemini's free tier is the fastest option (2–4 s for a dense full-page region); free OpenRouter models may be slower or queue at peak times.
+- A key is required. Provider, model, and key can be changed at any time in Settings.
+
+## Install
+
+### From the Chrome Web Store
+
+_Listing pending._ Once published, the extension installs with one click and updates automatically.
+
+### From source (unpacked)
+
+1. Build the extension (below) or use a prebuilt `dist/`
+2. Open `chrome://extensions`
+3. Enable **Developer mode** (top-right)
+4. Click **Load unpacked** → select the `dist/` folder
+5. Open the popup → gear icon → paste a free API key → **Save** → **Test**
 
 ## Build from source
 
@@ -32,13 +54,16 @@ Requirements: [Node.js](https://nodejs.org/) 23.6+ (build scripts are TypeScript
 git clone https://github.com/pushpkant00/image-to-text-ocr.git
 cd image-to-text-ocr
 npm install     # dependencies
-npm run setup   # bundles the offline OCR engine + English model + pdf.js (~16 MB into libs/)
-npm run build   # compiles TypeScript (tsc) + assembles the extension into dist/
+npm run setup   # vendors pdf.js (~2 MB) into libs/
+npm run build   # copies pages, compiles TypeScript, injects config → dist/
+npm run package # optional: zips dist/ into release/ for the Chrome Web Store
 ```
 
-Then **Load unpacked** → `dist/` (see above).
+Then **Load unpacked** → `dist/`. After every rebuild, press **Reload** on `chrome://extensions` and refresh any open tab.
 
-> `libs/` (engine binaries) and `dist/` (build output) are git-ignored and regenerated by `setup`/`build`, so clones stay light.
+> `libs/` (pdf.js) and `dist/` are git-ignored and regenerated by `setup`/`build`, so clones stay small.
+>
+> `build.ts` derives the unpacked extension id from the absolute path of `dist/` and warns if it drifts. That keeps the OAuth client id (and an existing Chrome sign-in) valid.
 
 ## Usage
 
@@ -47,24 +72,26 @@ Then **Load unpacked** → `dist/` (see above).
 | Select area | `Ctrl+Shift+X`, drag a box, release |
 | Image on a page | Right-click → *Extract text from this image* |
 | File / screenshot | Extension icon → *Upload Image File* or paste with `Ctrl+V` |
-| Conversions | Extension icon → **Convert** tab → pick one of the five modes (Jpg→Word, Pdf→Text, Pdf→Word, Text→PDF, Text→Word) |
-| History | Extension icon → *Open History Panel* |
-| Settings | Gear icon in the popup, or Dashboard → **Settings**: language, cleanup, result-card/panel behavior, auto-download (synced across devices) |
+| Conversions | Extension icon → **Convert** tab → pick a mode, choose a file or paste text |
+| History | Extension icon → history icon, or *Open history panel* after a capture |
+| Settings | Gear icon in the popup, or History → **Settings**: provider, model, API key, language, cleanup, result-card/panel behavior, auto-download |
 
-Works on normal websites. It **cannot** run on `chrome://` pages, the new-tab page, or the Chrome Web Store (Chrome blocks all extensions there) — you'll get a notification explaining why.
+Works on normal websites. It **cannot** run on `chrome://` pages, the New Tab page, other extensions' pages, or the Chrome Web Store — Chrome blocks all extensions there, and you get a notification explaining why.
 
-## Optional: login & cloud history (Firebase)
+## Optional: login and cloud history (Firebase)
 
-History lives in `chrome.storage.local` while you're not logged in (first-time / guest use). Log in with Google (or an email sign-in link) from the popup or side panel and history moves to your account's encrypted database: entries collected before logging in upload on sign-in, new results go straight to the database, and browser storage stays empty until you sign out (a local copy is restored then). Newest 100 entries are kept, deduplicated.
+History lives in `chrome.storage.local` while signed out. Sign in with Google (or an email link) and it moves to your account's Firestore database: pre-login entries upload on sign-in, new results go straight to the database, and local browser storage stays empty until you sign out (a local copy is restored then). The newest 100 entries are kept, deduplicated. Entry text is encrypted on the device, so the database holds ciphertext plus non-sensitive metadata (language, timestamp, crop area).
+
+Accounts are optional and configured by you; without a `firebase-secrets.json` the extension builds and runs, and the login card explains that sync is not configured.
 
 One-time setup:
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
-2. **Authentication → Sign-in method** → enable **Google** (and **Email/Password** if you also want email-link login)
+2. **Authentication → Sign-in method** → enable **Google** (and **Email/Password** for email-link login)
 3. **Firestore Database → Create database** (production mode)
-4. Project settings → **Your apps → Web app** → copy `apiKey`, `authDomain`, `projectId` into `firebase-secrets.json` (start from `firebase-secrets.example.json`; the file is gitignored and injected into `dist/` at build time — without it the extension still builds, but sign-in and cloud sync stay disabled)
-5. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) of the same project: **OAuth consent screen** → External → add your Google account under **Test users**, then **Credentials → Create credentials → OAuth client ID → Chrome extension** → paste the **Item ID** from `chrome://extensions` → copy the client ID into `firebase-secrets.json` as `googleClientId`
-6. Firestore **Rules** — only the owner can read/write their history:
+4. Project settings → **Your apps → Web app** → copy `apiKey`, `authDomain`, `projectId` into `firebase-secrets.json` (start from `firebase-secrets.example.json`; it is git-ignored and injected into `dist/` at build time)
+5. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) for the same project: **OAuth consent screen** → External → add your account under **Test users**, then **Credentials → Create credentials → OAuth client ID → Chrome extension** → paste the **Item ID** from `chrome://extensions` → copy the client ID into `firebase-secrets.json` as `googleClientId`
+6. Firestore **Rules** — only the owner can read or write their history:
 
 ```
 rules_version = '2';
@@ -79,88 +106,101 @@ service cloud.firestore {
 
 7. `npm run build`, reload the extension
 
-> **"Database permission denied"?** A fresh Firestore database starts in **locked mode** (everything denied). Paste the rules block above into **Firestore Database → Rules** and click **Publish** — until then login and history will report that error instead of working.
-
-> If your browser key has HTTP referrer restrictions, add `chrome-extension://<your-extension-id>` or use an unrestricted key for the Identity Toolkit API. Without config the extension works exactly as before — the Login card shows a hint instead.
+> **"Database permission denied"?** A new Firestore database starts in **locked mode**. Paste the rules above into **Firestore Database → Rules**, click **Publish**, and try again.
 
 ## How it works
 
 ```
 selection overlay (content script: drag box, toasts, result card)
-        │  area + devicePixelRatio
+        │  crop rectangle + devicePixelRatio
         ▼
-service worker (coordinator: captureVisibleTab, history, cloud sync)
+service worker (coordinator: captureVisibleTab, settings, history, cloud sync)
         │  full-tab screenshot + crop rect
         ▼
-offscreen document (DOM + canvas: crops, grayscales, runs Tesseract.js,
-                    extracts PDF text via pdf.js, OCRs scanned pages)
-        │  extracted text
+offscreen document (DOM + canvas: crop, scale ≤1536 px, JPEG-encode;
+                    pdf.js extracts PDF text layers and OCRs scanned pages)
+        │  image + language hint
         ▼
-side panel (searchable history) + result card + popup converters (.docx/.pdf)
+provider API  (Google Gemini or OpenRouter — SSE streaming, your key)
+        │  text deltas
+        ▼
+result card (live preview) + history + popup converters (.docx/.pdf)
 ```
 
-- **Why an offscreen document?** Manifest V3 service workers have no DOM/canvas and can't host Tesseract's worker — Chrome's `chrome.offscreen` API is the sanctioned home for it.
-- **Why `captureVisibleTab`?** Reading an `<img>` via canvas fails on cross-origin images (canvas tainting). Capturing the compositor's pixels sidesteps CORS entirely, so even video frames work.
-- **Storage:** settings in `chrome.storage.sync`; history in `chrome.storage.local` while signed out and in your account's encrypted Firestore history while signed in (image-free entries; Chrome sync quotas are too small for history).
+- **Why an offscreen document?** Manifest V3 service workers have no DOM or canvas. `chrome.offscreen` is Chrome's sanctioned place for cropping, encoding, and pdf.js.
+- **Why `captureVisibleTab`?** Reading an `<img>` through canvas fails on cross-origin images (canvas tainting). Capturing compositor pixels sidesteps CORS, so video frames work too.
+- **Why SSE?** The APIs stream text, so the card fills in as it is recognized instead of waiting for the whole answer; a 20 s idle watchdog aborts stalled requests.
+- **Storage:** settings in `chrome.storage.sync`; API keys in `chrome.storage.local`; history in `chrome.storage.local` while signed out, then in Firestore (encrypted) while signed in.
 
 ## Project structure
 
 ```
 manifest.json            MV3 manifest (dist-relative paths)
-build.ts                 assembles dist/ (page assets + runs tsc, no bundler needed)
-inject-config.ts         injects gitignored firebase-secrets.json into dist/ after tsc
-setup.ts                 bundles offline OCR assets into libs/
+build.ts                 assembles dist/, verifies the fixed extension id
+inject-config.ts         injects gitignored firebase-secrets.json into dist/
+package.ts               zips dist/ into release/ for store upload
+setup.ts                 vendors pdf.js into libs/
 src/
-  background/            service worker: capture, messaging, history, context menu, auth/sync
-  content/               drag-select overlay, toasts, result card (+ CSS)
-  offscreen/             hidden page: crop + Tesseract.js OCR + pdf.js PDF extraction
-  ocr/                   text cleanup utilities
-  convert/               .docx/.pdf writers + pdf.js text assembly (shared modules)
-  popup/                 toolbar popup: select, file/paste OCR, Convert tab, settings shortcut
+  background/            service worker: capture, messaging, context menu, history, auth/sync, crypto
+  content/               drag-select overlay, progress toast with live preview, result card (+ CSS)
+  offscreen/             hidden page: crop/encode, cloud OCR, pdf.js PDF extraction
+  ocr/                   provider clients (Gemini, OpenRouter), streaming, text cleanup
+  convert/               .docx/.pdf writers + pdf.js text assembly
+  popup/                 toolbar popup: OCR, Convert tab, theme, settings/history shortcuts
   sidepanel/             history panel: search, filter, copy, delete, login
   auth/                  login card, account dashboard, settings page
-  shared/                ambient type definitions (types.d.ts), Firebase config, shared Login modal
+  shared/                ambient types, Firebase config, shared login modal, theme bootstrap
 icons/                   extension icons
-docs/                    landing page (GitHub Pages, served from /docs)
+docs/                   project website (GitHub Pages, served from /docs)
 ```
 
 ## Permissions — why each is needed
 
 | Permission | Used for |
 |---|---|
-| `activeTab`, `scripting` | Capture the visible tab & inject the selection overlay |
-| `contextMenus` | Right-click → extract text from image |
-| `storage` | Settings (sync) + history (local) |
-| `offscreen` | Host the OCR engine outside the service worker |
-| `sidePanel` | Open the history panel after OCR |
-| `notifications` | Tell you when a page blocks extensions |
-| `http://*/*`, `https://*/*`, `file:///*` (host) | Run on normal sites; fetch right-clicked images for OCR |
+| `activeTab`, `scripting` | Capture the visible tab and inject the selection overlay |
+| `contextMenus` | Right-click → *Extract text from this image* |
+| `storage` | Settings (sync), API keys and history (local) |
+| `offscreen` | Host cropping, JPEG encoding, and pdf.js outside the service worker |
+| `sidePanel` | Show history alongside the page |
+| `notifications` | Explain why a restricted page cannot be captured |
+| `identity` | Optional Google sign-in for cloud history |
+| `http://*/*`, `https://*/*` (host) | Run the selection overlay on any site, fetch a right-clicked image, and call the OCR provider |
+| `file:///*` (host) | The same features on local HTML files (requires *Allow access to file URLs*) |
 
-No analytics. The OCR path makes no network calls (after the one-time language download); the only other traffic is Firebase auth/history sync, and only when you log in.
-
-Full details in [PRIVACY.md](PRIVACY.md).
+No analytics, no ads, no tracking. See [PRIVACY.md](PRIVACY.md) for every network request the extension can make.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| No box after `Ctrl+Shift+X` | You're on a restricted page (see above) — try a normal site; also check `chrome://extensions/shortcuts` |
-| `Only a single offscreen document…` | Fixed in recent builds — reload the extension and retry |
-| First OCR takes ~10s | Normal — the engine initializes once, then it's fast |
+| "No API key configured" | Popup → gear → paste a key, **Save**, then **Test** |
+| `400` / model not found | Pick another model in Settings; retired model ids are migrated automatically on load |
+| "Free-model daily limit reached" | OpenRouter's 50/day free quota is used up (resets 00:00 UTC) — switch to a Gemini model or wait |
+| No box after `Ctrl+Shift+X` | Restricted page (see above) or a shortcut conflict — check `chrome://extensions/shortcuts` |
 | Changed code but nothing different | Reload the extension on `chrome://extensions` **and** refresh the test tab |
-| Non-English gives an error | Its model isn't bundled — needs internet once to download, then works offline |
+| Sign-in says sync is not configured | Add `firebase-secrets.json` and rebuild (see above) |
+| Blank pages in a scanned PDF | Those pages failed OCR — check the key or quota, then retry the file |
 
 ## Tech
 
-- Chrome Manifest V3, **TypeScript** (strict mode, compiled with `tsc`) + vanilla HTML/CSS — no framework, no bundler
+- Chrome Manifest V3, **TypeScript** (strict) + vanilla HTML/CSS — no framework, no bundler
 - `npm run lint` type-checks without emitting (`tsc --noEmit`)
-- [Tesseract.js v5](https://github.com/naptha/tesseract.js) (LSTM OCR, WebAssembly) — fully local
-- [pdf.js v3](https://mozilla.github.io/pdf.js/) (vendored UMD build) — PDF text extraction; scanned pages fall back to Tesseract
+- [pdf.js v3](https://mozilla.github.io/pdf.js/) (vendored UMD build) — PDF text layers
 - Hand-rolled OOXML/PDF writers (`src/convert/`) — Word/PDF output with zero extra dependencies (PDF output uses Helvetica, so non-Latin scripts should use the Word path)
+- SSE streaming for Gemini `streamGenerateContent` and OpenRouter `chat/completions`
 
 ## Website
 
-A static landing page lives in [`docs/`](docs/) (plain HTML/CSS plus a small inline script for scroll reveals and the hero demo; no build step). To publish it with GitHub Pages: repo **Settings → Pages → Deploy from a branch → `main` → `/docs`**, then it serves at `https://pushpkant00.github.io/image-to-text-ocr/`.
+A project page lives in [`docs/`](docs/) — plain HTML and CSS plus one small script, no build step, no web fonts, no trackers, no cookies. It explains what the extension does, how the OCR pipeline works, which free models are available, and what leaves your device.
+
+The page has a light/dark toggle (stored in `localStorage`, defaults to the visitor's system theme), scroll-reveal animations, animated statistics, a mobile menu, and click-to-copy for the install command.
+
+To publish it with GitHub Pages: repo **Settings → Pages → Deploy from a branch → `main` → `/docs`**, then it serves at `https://pushpkant00.github.io/image-to-text-ocr/`.
+
+## Privacy
+
+Images go only to the OCR provider you choose, with your own key. History sync is opt-in and encrypted on-device. Full details: [PRIVACY.md](PRIVACY.md).
 
 ## License
 

@@ -3,11 +3,25 @@
   "minimum_chrome_version": "116",
   "name": "Image to Text OCR",
   "version": "1.0.0",
-  "description": "Extract text from images using on-device OCR. Right-click any image or select a region to copy text instantly.",
-  "permissions": ["activeTab", "contextMenus", "storage", "offscreen", "scripting", "sidePanel", "notifications", "identity"],
-  "host_permissions": ["http://*/*", "https://*/*", "file:///*"],
+  "description": "Extract text from images and PDFs. Right-click any image or select a region to copy text instantly.",
+  "homepage_url": "https://github.com/pushpkant00/image-to-text-ocr",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "offscreen",
+    "scripting",
+    "sidePanel",
+    "notifications",
+    "identity"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*",
+    "file:///*"
+  ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+    "extension_pages": "script-src 'self'; object-src 'self';"
   },
   "background": {
     "service_worker": "background/background.js",
@@ -36,16 +50,30 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*", "file:///*"],
-      "js": ["content/selection-overlay.js"],
-      "css": ["content/content.css"],
+      "matches": [
+        "http://*/*",
+        "https://*/*",
+        "file:///*"
+      ],
+      "js": [
+        "content/selection-overlay.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/icon16.png"],
-      "matches": ["http://*/*", "https://*/*", "file:///*"]
+      "resources": [
+        "icons/icon16.png"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*",
+        "file:///*"
+      ]
     }
   ],
   "icons": {

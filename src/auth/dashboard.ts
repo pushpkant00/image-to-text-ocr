@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return el as T;
   };
 
+  window.__ocrTheme?.mount(document.getElementById('theme-toggle'));
+
   // header
   const avatar = q<HTMLSpanElement>('avatar');
   const userEmail = q<HTMLSpanElement>('user-email');
@@ -195,9 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const lang = document.createElement('span');
       lang.className = 'lang';
       lang.textContent = entry.language || '';
-      const conf = document.createElement('span');
-      conf.className = 'conf';
-      conf.textContent = (entry.confidence || 0) + '%';
       const del = document.createElement('button');
       del.className = 'delete-btn';
       del.textContent = 'Delete';
@@ -207,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         history = history.filter((h) => h.id !== entry.id);
         renderHistory();
       });
-      header.append(date, lang, conf, del);
+      header.append(date, lang, del);
 
       const preview = document.createElement('div');
       preview.className = 'history-item-text';
@@ -222,9 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function openDetail(entry: OCRHistoryEntry): void {
     currentDetail = entry;
-    detailMeta.textContent = `${new Date(entry.timestamp).toLocaleString()} · ${entry.language || ''} · ${
-      entry.confidence || 0
-    }% confidence`;
+    detailMeta.textContent = `${new Date(entry.timestamp).toLocaleString()} · ${entry.language || ''}`;
     detailText.textContent = entry.text || '';
     detailModal.classList.remove('hidden');
   }

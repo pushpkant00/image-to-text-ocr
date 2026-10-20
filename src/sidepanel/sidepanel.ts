@@ -137,8 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
       date.textContent = new Date(entry.timestamp).toLocaleString();
       const lang = document.createElement('span');
       lang.textContent = entry.language || '';
-      const conf = document.createElement('span');
-      conf.textContent = (entry.confidence || 0) + '%';
       const del = document.createElement('button');
       del.className = 'delete-btn';
       del.textContent = 'Delete';
@@ -148,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         history = history.filter((h) => h.id !== entry.id);
         renderHistory();
       });
-      header.append(date, lang, conf, del);
+      header.append(date, lang, del);
 
       const preview = document.createElement('div');
       preview.className = 'history-item-text';
@@ -167,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     detailPanel.classList.remove('hidden');
     historyList.style.display = 'none';
     filters.style.display = 'none';
-    headerTitle.textContent = `Result · ${entry.confidence || 0}% · ${entry.language || ''}`;
+    headerTitle.textContent = `Result · ${entry.language || ''}`;
   }
 
   function closeDetail(): void {

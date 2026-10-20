@@ -5,11 +5,12 @@ import { openLoginModal } from '../shared/login.js';
 document.addEventListener('DOMContentLoaded', async () => {
   const q = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
+  window.__ocrTheme?.mount(document.getElementById('theme-toggle'));
+
   const fileInput = q<HTMLInputElement>('ocr-file');
   const settingsBtn = q<HTMLButtonElement>('settings-btn');
   const lastResult = q<HTMLElement>('last-result');
   const lastText = q<HTMLElement>('last-text');
-  const lastAccuracy = q<HTMLElement>('last-accuracy');
   const copyLastBtn = q<HTMLButtonElement>('copy-last-btn');
   const viewHistoryBtn = q<HTMLButtonElement>('view-history-btn');
   const accountBtn = q<HTMLButtonElement>('account-btn');
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- app settings (edited on the Settings page) ---
   let appSettings: OCRSettings = {
     language: 'eng',
+    visionModel: 'google:gemini-3.5-flash',
     removeLineBreaks: true,
     mergeSpaces: true,
     showResultCard: true,
@@ -54,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function ocrImageData(imageData: string): Promise<void> {
-    setStatus('Reading text… (first run loads the OCR engine, ~10s)');
+    setStatus('Reading text…');
     try {
       const res = await chrome.runtime.sendMessage({ type: 'OCR_IMAGE_DATA', imageData });
       if (!res?.ok) throw new Error(res?.error || 'OCR failed');
@@ -77,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     fileInput.value = '';
   });
 
-  // --- last result (accuracy + first line, copy only) ---
+  // --- last result (first line + copy only) ---
   let lastFullText = '';
 
   function setLabel(btn: HTMLButtonElement, text: string): void {
@@ -89,11 +91,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const text = (entry.text || '').trim();
     lastFullText = text;
     lastResult.classList.remove('hidden');
-
-    const confidence = Math.max(0, Math.min(100, Math.round(entry.confidence || 0)));
-    lastAccuracy.textContent = `${confidence}% accuracy`;
-    lastAccuracy.classList.remove('is-high', 'is-mid', 'is-low');
-    lastAccuracy.classList.add(confidence >= 80 ? 'is-high' : confidence >= 50 ? 'is-mid' : 'is-low');
 
     const firstLine = text.split(/\r?\n/).find((line) => line.trim().length > 0) || 'No text';
     lastText.textContent = firstLine;
@@ -261,7 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Jpg To Word: existing OCR pipeline, then wrap the text in a .docx
   async function convertImage(file: File): Promise<void> {
     resetConvertOutput();
-    setConvStatus('Reading text… (first run loads the OCR engine, ~10s)');
+    setConvStatus('Reading text…');
     try {
       const imageData = await fileToDataUrl(file);
       const res = await chrome.runtime.sendMessage({ type: 'OCR_IMAGE_DATA', imageData });
