@@ -203,14 +203,48 @@ button.primary:hover { background: var(--brand-dark); }
   color: var(--chip-fg);
 }
 /* one line only — no nested scrollbar */
-.result-line {
-  font-size: 12px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 8px;
+/* live progress box (text arriving while it is read) */
+.live-box {
+  margin-bottom: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: 8px;
+  background: var(--surface);
 }
+.live-head {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+.live-text {
+  margin: 6px 0 0;
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text);
+  user-select: text;
+}
+
+/* the recognized text, scrollable in the popup */
+.result-text {
+  max-height: 150px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  margin-bottom: 8px;
+  user-select: text;
+}
+
+
 .result-btn {
   width: 100%;
   display: flex;
@@ -234,132 +268,6 @@ button.primary:hover { background: var(--brand-dark); }
 
 /* generic visibility toggle (id/class sections in the popup) */
 .hidden { display: none !important; }
-
-/* ---------- mode tabs ---------- */
-.tabs {
-  display: flex;
-  gap: 3px;
-  padding: 3px;
-  margin-bottom: 12px;
-  background: var(--segment);
-  border-radius: 9px;
-}
-.tab {
-  flex: 1;
-  padding: 7px 0;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--text);
-  font-size: 12.5px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.tab:hover { color: var(--brand-dark); }
-.tab.active {
-  background: var(--tab-active);
-  color: var(--brand);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-.tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
-
-/* ---------- convert view ---------- */
-.pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.pill {
-  padding: 6px 10px;
-  border: 1px solid var(--control-border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-strong);
-  font-size: 11.5px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.pill:hover { border-color: var(--brand); color: var(--brand-dark); }
-.pill.active {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: var(--on-brand);
-}
-.pill:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
-
-#conv-text {
-  display: block;
-  width: 100%;
-  min-height: 90px;
-  padding: 8px;
-  border: 1px solid var(--control-border);
-  border-radius: 6px;
-  background: var(--control-bg);
-  font-family: inherit;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text);
-  resize: vertical;
-  margin-bottom: 2px;
-}
-#conv-text:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
-
-.progress {
-  height: 6px;
-  margin-bottom: 10px;
-  background: var(--segment);
-  border-radius: 999px;
-  overflow: hidden;
-}
-.progress-bar {
-  height: 100%;
-  width: 0;
-  background: var(--brand);
-  border-radius: 999px;
-  transition: width 0.25s ease;
-}
-@media (prefers-reduced-motion: reduce) {
-  .progress-bar { transition: none; }
-}
-
-.conv-run {
-  width: 100%;
-  margin-bottom: 2px;
-}
-.conv-run:hover { background: var(--brand-dark); }
-
-.conv-result-text {
-  max-height: 110px;
-  overflow: auto;
-  padding: 7px;
-  margin-bottom: 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface-2);
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.result-actions {
-  display: flex;
-  gap: 6px;
-}
-.result-actions .result-btn {
-  flex: 1;
-  margin: 0;
-}
-.result-actions .result-btn:not(.primary) {
-  background: var(--brand-tint);
-  color: var(--brand-dark);
-}
-.result-actions .result-btn:not(.primary):hover { background: var(--brand-tint-2); }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }

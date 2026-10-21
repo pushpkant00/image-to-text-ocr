@@ -41,6 +41,15 @@ interface RawOcrResult {
 
 type VisionProviderId = 'google' | 'openrouter';
 
+/** OCR events the background broadcasts to extension pages (popup, side panel). */
+interface OcrBroadcast {
+  type: 'OCR_START' | 'OCR_LIVE' | 'OCR_RESULT';
+  requestId?: string;
+  text?: string;
+  entry?: OCRHistoryEntry;
+  ms?: number;
+}
+
 interface OcrRunPayload {
   imageData: string;
   area?: SelectionArea;

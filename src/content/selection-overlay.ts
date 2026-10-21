@@ -154,9 +154,10 @@ interface Window {
     indicator.style.maxWidth = 'min(70vw, 560px)';
     indicator.style.textAlign = 'left';
     const started = Date.now();
+    // tick every 100ms so the readout resolves to tenths of a second
     const ticker = window.setInterval(() => {
-      label.textContent = `Reading text… ${Math.floor((Date.now() - started) / 1000)}s`;
-    }, 1000);
+      label.textContent = `Reading text… ${((Date.now() - started) / 1000).toFixed(1)}s`;
+    }, 100);
     try {
       const settings = await chrome.storage.sync.get<SyncStorage>({ language: 'eng', showResultCard: true });
       const res = await chrome.runtime.sendMessage({

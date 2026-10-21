@@ -7,8 +7,6 @@ _Last updated: 20 October 2026_
 ## 1. Data processed on your device
 
 - Screenshots, selected regions, pasted images, and image files you open are cropped, resized (max 1536 px), and JPEG-encoded inside an offscreen document in your browser.
-- PDF conversions first extract the PDF's own text layer with pdf.js; pages without one are rasterized and OCR'd page by page.
-- `.docx` and `.pdf` outputs (Convert tab) are generated locally.
 - Extracted text and metadata (language, timestamp, crop area) are written to history. While signed out, history lives in `chrome.storage.local`; once you sign in it is stored only in your account's cloud history (§3) and removed from browser storage.
 - Images are **not** stored in history; the encoded copy is discarded after recognition.
 - API keys are stored in `chrome.storage.local` on this device and are never synced.

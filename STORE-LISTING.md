@@ -11,7 +11,7 @@ into the [Chrome Web Store Developer Dashboard](https://chrome.google.com/websto
 - [ ] `npm run build` succeeds (no TypeScript errors)
 - [ ] `npm run package` produces `release/image-to-text-ocr-1.0.0.zip`
 - [ ] Extension loads cleanly from `dist/` (`chrome://extensions` → **Load unpacked**, no errors)
-- [ ] A smoke test with a real key: selection OCR, right-click image, popup paste, one Convert mode, history, Settings save/test, dark-mode toggle
+- [ ] A smoke test with a real key: selection OCR, right-click image, popup upload/paste, live text in the popup, history, Settings save/test, dark-mode toggle
 - [ ] Privacy policy is publicly reachable (see **§3.5**)
 - [ ] Listing graphics ready (see **§4**)
 
@@ -68,7 +68,7 @@ Image to Text OCR
 **Short description** (max 132 chars)
 
 ```
-Turn images into copyable text with your own free Gemini or OpenRouter key. Select, capture, convert.
+Turn images into copyable text with your own free Gemini or OpenRouter key. Select, capture, copy.
 ```
 
 **Category:** Productivity → Tools
@@ -87,13 +87,10 @@ THREE WAYS TO CAPTURE
 • Right-click any image → "Extract text from this image"
 • Open the popup to upload an image file or paste a screenshot with Ctrl+V
 
-CONVERT FILES
-The Convert tab turns what you captured into a document:
-• Jpg To Word — OCR an image into an editable .docx
-• Pdf To Text — extract a PDF's text layer
-• Pdf To Word — editable Word document, with OCR for scanned pages
-• Text To PDF and Text To Word
-Files are assembled on your device; no conversions are uploaded.
+READ IT WHEREVER YOU ARE
+The result shows up as a small card on the page, and the toolbar popup shows the
+same text while it is being read — so you can copy it without hunting for the
+card. History keeps every result as searchable text.
 
 HISTORY THAT STAYS YOURS
 Search, filter by language, copy, or delete past captures in the side panel or the dashboard. Optionally sign in to sync history across devices — entries are encrypted on your device before they are stored.
@@ -130,7 +127,8 @@ NOTE: A free API key (Google AI Studio or OpenRouter) is required for OCR. The e
 Convert images and PDFs into editable, copyable text. The user selects a screen
 region, right-clicks an image, or opens a file; the extension sends that image to
 the OCR provider the user configured with their own API key and returns the
-recognized text, with optional encrypted history sync.
+recognized text in a result card and in the toolbar popup, with optional
+encrypted history sync.
 ```
 
 ### 3.2 Permission justifications
@@ -162,8 +160,7 @@ key and their text-only history (chrome.storage.local).
 `offscreen`
 ```
 MV3 service workers have no DOM or canvas. The offscreen document crops and
-JPEG-encodes the captured image, runs pdf.js for PDFs, and builds .docx/.pdf
-output — all locally.
+JPEG-encodes the captured image and runs pdf.js for PDFs — all locally.
 ```
 
 `sidePanel`
@@ -263,7 +260,8 @@ short-lived key and step-by-step test instructions:
 4. Open https://en.wikipedia.org/wiki/Text and press Ctrl+Shift+X; draw a box over
    a paragraph. Text streams into the card; click Copy.
 5. Right-click any image on that page → "Extract text from this image".
-6. Popup → Convert tab → Jpg To Word with any screenshot; a .docx downloads.
+6. Popup → Upload Image File (or paste a screenshot with Ctrl+V); the text appears
+   live in the popup and the Copy button copies it.
 7. Settings → toggle dark mode. Optional: History page → search/delete.
 
 The key above is rate-limited and will be revoked after review. OCR requests go

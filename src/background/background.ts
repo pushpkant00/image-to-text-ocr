@@ -152,6 +152,12 @@ async function sendViaOffscreen<T>(type: string, payload: unknown): Promise<T> {
   }
 }
 
+/** Push an OCR event to every extension page (popup, side panel). Content
+ *  scripts are not reached by runtime.sendMessage, so nothing double-handles. */
+function broadcast(event: OcrBroadcast): void {
+  chrome.runtime.sendMessage(event).catch(() => {});
+}
+
 async function ocrViaOffscreen(payload: OcrRunPayload): Promise<RawOcrResult> {
   const engine = await resolveEngine(await getSettings());
   return sendViaOffscreen<RawOcrResult>('OCR_RUN', { ...payload, ...engine });
@@ -261,10 +267,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId !== 'ocr-right-click' || !info.srcUrl) return;
   try {
     const settings = await getSettings();
+    const started = Date.now();
+    broadcast({ type: 'OCR_START' });
     const imageData = await fetchAsDataUrl(info.srcUrl);
     const raw = await ocrViaOffscreen({ imageData, language: settings.language });
     if (raw?.error) throw new Error(raw.error);
     const entry = await processResult(raw, settings);
+    const ms = Date.now() - started;
+    broadcast({ type: 'OCR_RESULT', entry, ms });
     // send text back to the tab so the content script can show the result card
     if (tab?.id && settings.showResultCard) {
       chrome.tabs.sendMessage(tab.id, { type: 'OCR_DONE', entry }).catch(() => {});
@@ -345,6 +355,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'OCR_CAPTURE': {
         // from content script: { area, dpr, language? }
         const tab = sender.tab;
+        const started = Date.now();
+        broadcast({ type: 'OCR_START', requestId: msg.requestId });
         const entry = await ocrSelection({
           windowId: tab?.windowId,
           area: msg.area,
@@ -353,7 +365,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           tabId: tab?.id,
           requestId: msg.requestId,
         });
+        const ms = Date.now() - started;
         sendResponse({ ok: true, entry });
+        broadcast({ type: 'OCR_RESULT', entry, ms, requestId: msg.requestId });
         const settings = await getSettings();
         if (tab?.windowId && settings.openHistoryAfterOcr) openSidePanel(tab.windowId);
         // tell the originating tab so it can show the result card
@@ -365,13 +379,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'OCR_IMAGE_DATA': {
         // from popup paste/upload: { imageData, language? }
         const settings = await getSettings();
+        const started = Date.now();
+        broadcast({ type: 'OCR_START' });
         const raw = await ocrViaOffscreen({
           imageData: msg.imageData,
           language: msg.language || settings.language,
         });
         if (raw?.error) throw new Error(raw.error);
         const entry = await processResult(raw, settings, { language: msg.language || settings.language });
-        sendResponse({ ok: true, entry });
+        const ms = Date.now() - started;
+        sendResponse({ ok: true, entry, ms });
+        broadcast({ type: 'OCR_RESULT', entry, ms });
         break;
       }
       case 'GET_SETTINGS':
@@ -510,6 +528,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       case 'OCR_PARTIAL': {
         // relayed from the offscreen document to the tab that asked for OCR
+        broadcast({ type: 'OCR_LIVE', requestId: msg.requestId, text: msg.text });
         if (msg.tabId) {
           chrome.tabs
             .sendMessage(msg.tabId, {

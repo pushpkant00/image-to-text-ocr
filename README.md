@@ -10,9 +10,8 @@ OCR runs on **your own free API key** (Google Gemini, or a free vision model on 
 
 - **Drag-to-select OCR** — `Ctrl+Shift+X` (`⌘+Shift+X` on Mac), draw a box over anything: images, video frames, PDFs open in the browser, charts, screenshots
 - **Right-click any image** → *Extract text from this image*
-- **Popup tools** — OCR an image file or paste a screenshot from the clipboard (`Ctrl+V`)
+- **Popup tools** — OCR an image file or paste a screenshot from the clipboard (`Ctrl+V`); the recognized text shows up live in the popup while it is read
 - **Streaming result card** — recognized text appears live as the model writes it, with **Preview** and **Copy** (nothing is copied until you click Copy)
-- **Convert tab** — five conversions: *Jpg To Word* (OCR → `.docx`), *Pdf To Text*, *Pdf To Word* (pdf.js text layer, with per-page OCR for scanned pages), *Text To PDF*, *Text To Word*. Files are assembled locally; only OCR needs the network
 - **History** — side panel and dashboard with search, language filter, copy, and delete
 - **Optional account sync** — sign in with Google or an email link to keep history across devices. Text is encrypted (AES-256-GCM) on your device before it is stored
 - **Dark mode** — Settings, History, and the popup follow your OS theme, with a sun/moon toggle to override it
@@ -72,7 +71,6 @@ Then **Load unpacked** → `dist/`. After every rebuild, press **Reload** on `ch
 | Select area | `Ctrl+Shift+X`, drag a box, release |
 | Image on a page | Right-click → *Extract text from this image* |
 | File / screenshot | Extension icon → *Upload Image File* or paste with `Ctrl+V` |
-| Conversions | Extension icon → **Convert** tab → pick a mode, choose a file or paste text |
 | History | Extension icon → history icon, or *Open history panel* after a capture |
 | Settings | Gear icon in the popup, or History → **Settings**: provider, model, API key, language, cleanup, result-card/panel behavior, auto-download |
 
@@ -124,7 +122,7 @@ offscreen document (DOM + canvas: crop, scale ≤1536 px, JPEG-encode;
 provider API  (Google Gemini or OpenRouter — SSE streaming, your key)
         │  text deltas
         ▼
-result card (live preview) + history + popup converters (.docx/.pdf)
+result card (live preview) + popup (live text) + history
 ```
 
 - **Why an offscreen document?** Manifest V3 service workers have no DOM or canvas. `chrome.offscreen` is Chrome's sanctioned place for cropping, encoding, and pdf.js.
@@ -145,8 +143,8 @@ src/
   content/               drag-select overlay, progress toast with live preview, result card (+ CSS)
   offscreen/             hidden page: crop/encode, cloud OCR, pdf.js PDF extraction
   ocr/                   provider clients (Gemini, OpenRouter), streaming, text cleanup
-  convert/               .docx/.pdf writers + pdf.js text assembly
-  popup/                 toolbar popup: OCR, Convert tab, theme, settings/history shortcuts
+  convert/               pdf.js text extraction helpers
+  popup/                 toolbar popup: OCR, live text, theme, settings/history shortcuts
   sidepanel/             history panel: search, filter, copy, delete, login
   auth/                  login card, account dashboard, settings page
   shared/                ambient types, Firebase config, shared login modal, theme bootstrap
@@ -186,8 +184,7 @@ No analytics, no ads, no tracking. See [PRIVACY.md](PRIVACY.md) for every networ
 
 - Chrome Manifest V3, **TypeScript** (strict) + vanilla HTML/CSS — no framework, no bundler
 - `npm run lint` type-checks without emitting (`tsc --noEmit`)
-- [pdf.js v3](https://mozilla.github.io/pdf.js/) (vendored UMD build) — PDF text layers
-- Hand-rolled OOXML/PDF writers (`src/convert/`) — Word/PDF output with zero extra dependencies (PDF output uses Helvetica, so non-Latin scripts should use the Word path)
+- [pdf.js v3](https://mozilla.github.io/pdf.js/) (vendored UMD build) — PDF text extraction
 - SSE streaming for Gemini `streamGenerateContent` and OpenRouter `chat/completions`
 
 ## Website
