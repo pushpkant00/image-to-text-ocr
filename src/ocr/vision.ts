@@ -581,6 +581,19 @@ export async function testVisionKey(
   const started = performance.now();
   const key = (apiKey || '').trim();
   if (!key) throw new VisionError('No API key to test.', 401);
+  // Catch a key pasted into the wrong provider's box before the API does.
+  if (provider === 'openrouter' && !key.startsWith('sk-or-v1')) {
+    throw new VisionError(
+      'That is not an OpenRouter key — OpenRouter keys start with "sk-or-v1". A Google key starts with "AIza".',
+      401,
+    );
+  }
+  if (provider === 'google' && !key.startsWith('AIza')) {
+    throw new VisionError(
+      'That is not a Google AI Studio key — Gemini keys start with "AIza". An OpenRouter key starts with "sk-or-v1".',
+      401,
+    );
+  }
   if (provider === 'openrouter') return testOpenRouterKey(key, signal, started);
   const target = (model || DEFAULT_VISION_MODEL).trim() || DEFAULT_VISION_MODEL;
   // Same endpoint and transport as real OCR, so the time reported here is what

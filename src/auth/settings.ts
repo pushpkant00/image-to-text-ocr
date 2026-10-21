@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const keyTest = q<HTMLButtonElement>('key-test');
   const keyClear = q<HTMLButtonElement>('key-clear');
   const keyStatus = q<HTMLElement>('key-status');
+  const keyMissing = q<HTMLElement>('key-missing');
 
   interface VisionKeyResponse {
     ok?: boolean;
@@ -99,6 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
     keyClear.classList.toggle('hidden', !hasSavedKey);
     keyInput.placeholder = hasSavedKey ? 'Saved key — paste a new one to replace' : copy.placeholder;
     keyInput.value = '';
+    // Make an unsaved key obvious before someone presses Test and wonders why
+    // the provider says the key is missing.
+    keyMissing.textContent = hasSavedKey
+      ? ''
+      : `No ${selectedProvider() === 'openrouter' ? 'OpenRouter' : 'Gemini'} key saved on this device yet — paste one and press Save.`;
+    keyMissing.classList.toggle('hidden', hasSavedKey);
   }
 
   async function loadKey(): Promise<void> {

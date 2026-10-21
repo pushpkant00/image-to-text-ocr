@@ -2,6 +2,7 @@ import { cleanText } from '../ocr/text-detector.js';
 import {
   DEFAULT_VISION_MODEL,
   VISION_MODELS,
+  VisionError,
   modelValue,
   parseVisionModel,
   testVisionKey,
@@ -494,7 +495,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: true, user: null });
         break;
       case 'SYNC_HISTORY':
-        sendResponse({ ok: true, stats: await syncHistory() });
+        try {
+          sendResponse({ ok: true, stats: await syncHistory() });
+        } catch (err) {
+          // The dashboard shows this message in its sync banner — no stack noise.
+          const detail = err instanceof Error ? err.message : String(err);
+          console.warn('[ocr] sync failed:', detail);
+          sendResponse({ ok: false, error: detail });
+        }
         break;
       case 'PDF_EXTRACT': {
         // from popup: { pdfData, language? } — offscreen does the work
@@ -553,7 +561,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: false, error: 'unknown message' });
     }
   })().catch((err: unknown) => {
-    console.error('[ocr] message failed:', (msg as { type?: string })?.type, err);
+    // These failures are already reported to the user (status line, dashboard
+    // banner). Logging them as errors would badge the extension in
+    // chrome://extensions even though nothing is broken.
+    const detail = err instanceof Error ? err.message : String(err);
+    const expected =
+      err instanceof VisionError ||
+      /permission denied|rules|session expired|network|no API key|not configured/i.test(detail);
+    const log = expected ? console.warn : console.error;
+    log('[ocr] message failed:', (msg as { type?: string })?.type, detail);
     sendResponse({ ok: false, error: errorMessage(err) });
   });
   return true; // async response

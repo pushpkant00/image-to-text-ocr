@@ -105,6 +105,16 @@
 .key-help { font-size: 12px; color: var(--muted); margin-top: 8px; }
 .key-help a { color: var(--brand); }
 #key-status { margin-top: 8px; }
+.key-missing {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--warn-line);
+  border-radius: 8px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.5;
+}
 #key-status.success { color: var(--success); }
 #key-status.error { color: var(--danger); }
 
