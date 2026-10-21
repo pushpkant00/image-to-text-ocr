@@ -32,7 +32,7 @@ for (const dir of ['background', 'content', 'ocr', 'offscreen', 'popup', 'sidepa
   copyAssets(join(root, 'src', dir), join(dist, dir));
 }
 
-for (const dir of ['libs', 'icons']) {
+for (const dir of ['icons']) {
   const actualSrc = join(root, dir);
   if (existsSync(actualSrc)) cpSync(actualSrc, join(dist, dir), { recursive: true });
 }

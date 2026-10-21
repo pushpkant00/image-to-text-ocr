@@ -80,7 +80,7 @@ Turn images into copyable text with your own free Gemini or OpenRouter key. Sele
 Image to Text OCR turns anything you can see into text you can copy.
 
 SELECT ANYTHING
-Press Ctrl+Shift+X (Command+Shift+X on Mac) and drag a box over an image, a chart, a scanned PDF, a video frame, or a slide deck. The text appears in a small card within a couple of seconds and streams in live as it is recognized.
+Press Ctrl+Shift+X (Command+Shift+X on Mac) and drag a box over an image, a chart, a slide, or a video frame. The text appears in a small card within a couple of seconds and streams in live as it is recognized.
 
 THREE WAYS TO CAPTURE
 • Ctrl+Shift+X — drag a region anywhere on the page
@@ -124,7 +124,7 @@ NOTE: A free API key (Google AI Studio or OpenRouter) is required for OCR. The e
 ### 3.1 Single purpose
 
 ```
-Convert images and PDFs into editable, copyable text. The user selects a screen
+Turn images and on-screen text into editable, copyable text. The user selects a screen
 region, right-clicks an image, or opens a file; the extension sends that image to
 the OCR provider the user configured with their own API key and returns the
 recognized text in a result card and in the toolbar popup, with optional
@@ -160,7 +160,7 @@ key and their text-only history (chrome.storage.local).
 `offscreen`
 ```
 MV3 service workers have no DOM or canvas. The offscreen document crops and
-JPEG-encodes the captured image and runs pdf.js for PDFs — all locally.
+JPEG-encodes the captured image — all locally.
 ```
 
 `sidePanel`
@@ -203,7 +203,7 @@ simply does nothing there.
 No, I am not using remote code.
 ```
 
-All JavaScript is bundled in the ZIP (including pdf.js). The extension only
+All JavaScript is bundled in the ZIP. The extension only
 fetches **data** at runtime: the user's OCR requests and a public model list from
 `openrouter.ai/api/v1/models`.
 
@@ -311,6 +311,6 @@ Screenshots must show the real UI (no device frames or marketing text required).
 - **"Needs a key"** → always include working review notes and a capped test key
 - **Broad host permissions** → the justification in §3.2 must be specific; do not leave it blank
 - **Missing privacy policy** → the URL must load without login
-- **Remote code** → never load scripts from a CDN; pdf.js is vendored in `libs/`
+- **Remote code** → never load scripts from a CDN; all code ships inside the ZIP
 - **Undisclosed data transfer** → tick *Website content* and explain the provider request
 - **Excessive description** → do not repeat keywords or add unrelated features

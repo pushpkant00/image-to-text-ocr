@@ -31,7 +31,6 @@ interface OCRSettings {
   mergeSpaces: boolean;
   showResultCard: boolean;
   openHistoryAfterOcr: boolean;
-  autoDownload: boolean;
 }
 
 interface RawOcrResult {
@@ -68,40 +67,6 @@ interface OcrRunPayload {
   startedAt?: number;
 }
 
-/** Background <-> offscreen payload/response for PDF text extraction. */
-interface PdfRunPayload {
-  pdfData: ArrayBuffer;
-  language?: string;
-  model?: string;
-  provider?: VisionProviderId;
-  apiKey?: string;
-}
-
-interface PdfExtractResponse {
-  text?: string;
-  pages?: number;
-  ocrPages?: number;
-  error?: string;
-}
-
-/** Broadcast by the offscreen document after each PDF page. */
-interface ConvertProgressMsg {
-  page: number;
-  total: number;
-  ocr: boolean;
-}
-
-/** Safety net: last completed PDF extraction, restored if the popup closed. */
-interface LastConvert {
-  text: string;
-  pages: number;
-  ts: number;
-  /** Convert mode active when it ran (pdf-text | pdf-word). */
-  mode?: string;
-  /** Original file name (with extension) for restoring the download name. */
-  name?: string;
-}
-
 interface AuthUser {
   uid: string;
   email: string;
@@ -127,8 +92,6 @@ interface LocalStorage {
   syncKeys?: Record<string, string>;
   /** uid of the last account used on this device — device history is isolated per account. */
   lastAccountUid?: string | null;
-  /** Last completed PDF extraction (cleared once read by the popup). */
-  lastConvert?: LastConvert | null;
   /** Gemini API key. Local only — never synced to the account. */
   visionApiKey?: string;
   /** OpenRouter API key. Local only — never synced to the account. */
@@ -154,9 +117,6 @@ type BackgroundRequest =
   | { type: 'AUTH_SIGN_OUT' }
   | { type: 'AUTH_DELETE' }
   | { type: 'SYNC_HISTORY' }
-  | { type: 'PDF_EXTRACT'; pdfData: ArrayBuffer; language?: string; mode?: string; name?: string }
-  | { type: 'GET_LAST_CONVERT' }
-  | { type: 'CONVERT_PROGRESS'; page: number; total: number; ocr: boolean }
   | { type: 'OCR_RUN'; payload: OcrRunPayload }
   | { type: 'GET_VISION_KEY'; provider?: VisionProviderId }
   | { type: 'SAVE_VISION_KEY'; apiKey: string; provider?: VisionProviderId }

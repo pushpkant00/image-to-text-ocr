@@ -3,7 +3,7 @@
   "minimum_chrome_version": "116",
   "name": "Image to Text OCR",
   "version": "1.0.0",
-  "description": "Extract text from images and PDFs. Right-click any image or select a region to copy text instantly.",
+  "description": "Extract text from images and screen regions. Right-click any image or select a region to copy text instantly.",
   "homepage_url": "https://github.com/pushpkant00/image-to-text-ocr",
   "permissions": [
     "activeTab",

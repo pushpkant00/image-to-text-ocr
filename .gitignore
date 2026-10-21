@@ -1,6 +1,5 @@
 node_modules/
 dist/
-libs/
 firebase-secrets.json
 *.log
 *.pem

@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const mergeSpaces = q<HTMLInputElement>('merge-spaces');
   const showResultCard = q<HTMLInputElement>('show-result-card');
   const openHistory = q<HTMLInputElement>('open-history');
-  const autoDownload = q<HTMLInputElement>('auto-download');
 
   // ---------- cloud OCR ----------
   const visionModelSelect = q<HTMLSelectElement>('vision-model');
@@ -190,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
       mergeSpaces.checked = s.mergeSpaces !== false;
       showResultCard.checked = s.showResultCard !== false;
       openHistory.checked = s.openHistoryAfterOcr !== false;
-      autoDownload.checked = s.autoDownload === true;
     } catch {
       /* keep the defaults already rendered */
     }
@@ -211,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
   mergeSpaces.addEventListener('change', () => save(mergeSpaces, { mergeSpaces: mergeSpaces.checked }));
   showResultCard.addEventListener('change', () => save(showResultCard, { showResultCard: showResultCard.checked }));
   openHistory.addEventListener('change', () => save(openHistory, { openHistoryAfterOcr: openHistory.checked }));
-  autoDownload.addEventListener('change', () => save(autoDownload, { autoDownload: autoDownload.checked }));
 
   visionModelSelect.addEventListener('change', async () => {
     setKeyStatus('');

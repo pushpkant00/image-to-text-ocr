@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     mergeSpaces: true,
     showResultCard: true,
     openHistoryAfterOcr: true,
-    autoDownload: false,
   };
   async function loadSettings(): Promise<void> {
     try {

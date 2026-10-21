@@ -1,4 +1,4 @@
-import { cleanText } from '../ocr/text-detector.js';
+import { cleanText } from '../ocr/text-cleanup.js';
 import {
   DEFAULT_VISION_MODEL,
   VISION_MODELS,
@@ -32,7 +32,6 @@ const DEFAULT_SETTINGS: OCRSettings = {
   mergeSpaces: true,
   showResultCard: true,
   openHistoryAfterOcr: true,
-  autoDownload: false,
 };
 
 function errorMessage(err: unknown): string {
@@ -116,7 +115,7 @@ async function ensureOffscreen(): Promise<void> {
       .createDocument({
         url: OFFSCREEN_URL,
         reasons: ['WORKERS', 'CLIPBOARD'],
-        justification: 'Render PDF pages with pdf.js workers and crop screenshots off the main thread',
+        justification: 'Crop screenshots and JPEG-encode them off the main thread',
       })
       .catch((e: unknown) => {
         // Lost a race with another call — document exists, that's fine.
@@ -319,7 +318,7 @@ interface TriggerResult {
 async function triggerSelection(tab?: chrome.tabs.Tab): Promise<TriggerResult> {
   if (!tab?.id) return { ok: false, error: 'No active tab' };
   // Warm the offscreen document while the user is still dragging, so the first
-  // OCR request doesn't pay for loading pdf.js + the vision module.
+  // OCR request doesn't pay for creating the document.
   void ensureOffscreen();
   try {
     await chrome.tabs.sendMessage(tab.id, { type: 'START_SELECTION' });
@@ -506,36 +505,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ ok: false, error: detail });
         }
         break;
-      case 'PDF_EXTRACT': {
-        // from popup: { pdfData, language? } — offscreen does the work
-        const engine = await resolveEngine(await getSettings());
-        const res = await sendViaOffscreen<PdfExtractResponse | undefined>('PDF_RUN', {
-          pdfData: msg.pdfData,
-          language: msg.language,
-          ...engine,
-        });
-        if (!res) throw new Error('No response from the PDF engine');
-        if (res.error) throw new Error(res.error);
-        const text = res.text || '';
-        // Persist so a closed popup can restore the result on reopen.
-        await chrome.storage.local.set({
-          lastConvert: {
-            text,
-            pages: res.pages || 0,
-            ts: Date.now(),
-            mode: msg.mode,
-            name: msg.name,
-          } satisfies LastConvert,
-        });
-        sendResponse({ ok: true, text, pages: res.pages || 0, ocrPages: res.ocrPages || 0 });
-        break;
-      }
-      case 'GET_LAST_CONVERT': {
-        const { lastConvert = null } = await chrome.storage.local.get<LocalStorage>({ lastConvert: null });
-        await chrome.storage.local.set({ lastConvert: null });
-        sendResponse({ ok: true, lastConvert });
-        break;
-      }
       case 'OCR_PARTIAL': {
         // relayed from the offscreen document to the tab that asked for OCR
         broadcast({ type: 'OCR_LIVE', requestId: msg.requestId, text: msg.text, startedAt: msg.startedAt });
@@ -551,10 +520,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: true });
         break;
       }
-      case 'CONVERT_PROGRESS':
-        // progress broadcast from offscreen — the popup listens for it
-        sendResponse({ ok: true });
-        break;
       case 'OCR_RUN':
         // offscreen's own request; it listens for this message — we don't handle it
         sendResponse({ ok: false, error: 'unknown message' });

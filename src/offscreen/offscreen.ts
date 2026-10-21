@@ -1,11 +1,8 @@
-// Offscreen document: has DOM + canvas. Crops screenshots, renders PDF pages
-// with pdf.js, and sends each image to the cloud OCR engine (Gemini vision).
-// Listens for { type: 'OCR_RUN', payload: OcrRunPayload } and
-// { type: 'PDF_RUN', payload: PdfRunPayload }; the background resolves the
-// user's Gemini API key and model and attaches them to the payload.
-// Loaded as a module (offscreen.html); pdf.js remains a global classic script.
+// Offscreen document: has DOM + canvas. Crops screenshots and sends each image
+// to the cloud OCR engine (Gemini vision).
+// Listens for { type: 'OCR_RUN', payload: OcrRunPayload }; the background
+// resolves the user's API key and model and attaches them to the payload.
 
-import { itemsToText } from '../convert/pdf-text.js';
 import { DEFAULT_VISION_MODEL, MAX_VISION_EDGE, recognizeImage } from '../ocr/vision.js';
 
 (() => {
@@ -113,73 +110,7 @@ import { DEFAULT_VISION_MODEL, MAX_VISION_EDGE, recognizeImage } from '../ocr/vi
     return { text: result.text.trim() };
   }
 
-  // ---------- PDF -> text (pdf.js text layer, OCR fallback for scans) ----------
-
-  async function ocrPdfPage(page: PdfjsPage, options: EngineOptions): Promise<string> {
-    const base = page.getViewport({ scale: 1 });
-    // ~2000px wide keeps small print legible; the long edge never exceeds the
-    // model's useful resolution.
-    let scale = Math.min(4, Math.max(2, 2000 / base.width));
-    scale = Math.min(scale, MAX_VISION_EDGE / Math.max(base.width, base.height));
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.floor(viewport.width));
-    canvas.height = Math.max(1, Math.floor(viewport.height));
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return '';
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
-    const result = await recognizeImage(
-      visionRequest(
-        { dataUrl: encode(canvas), width: canvas.width, height: canvas.height },
-        options,
-      ),
-    );
-    return result.text.trim();
-  }
-
-  async function extractPdfText(payload: PdfRunPayload): Promise<PdfExtractResponse> {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('libs/pdfjs/pdf.worker.min.js');
-    const doc = await pdfjsLib.getDocument({ data: payload.pdfData, isEvalSupported: false }).promise;
-    const total = doc.numPages;
-    const options: EngineOptions = {
-      model: payload.model,
-      provider: payload.provider || 'google',
-      apiKey: payload.apiKey,
-      language: payload.language,
-    };
-    const parts: string[] = [];
-    let ocrPages = 0;
-    try {
-      for (let p = 1; p <= total; p++) {
-        const page = await doc.getPage(p);
-        let text = '';
-        try {
-          text = itemsToText((await page.getTextContent()).items).trim();
-        } catch (err) {
-          console.warn('[pdf] getTextContent failed on page', p, err);
-        }
-        // Fewer than 10 non-space chars -> treat the page as a scan and OCR it.
-        let didOcr = false;
-        if (text.replace(/\s/g, '').length < 10) {
-          try {
-            text = await ocrPdfPage(page, options);
-            didOcr = true;
-            ocrPages++;
-          } catch (err) {
-            console.warn('[pdf] page OCR failed on page', p, err);
-          }
-        }
-        parts.push(text);
-        chrome.runtime
-          .sendMessage({ type: 'CONVERT_PROGRESS', page: p, total, ocr: didOcr })
-          .catch(() => {});
-      }
-    } finally {
-      await doc.destroy().catch(() => {});
-    }
-    return { text: parts.join('\n\n'), pages: total, ocrPages };
-  }
+  // ---------- OCR ----------
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const msg = message as { type?: string; payload?: OcrRunPayload } | undefined;
@@ -225,22 +156,6 @@ import { DEFAULT_VISION_MODEL, MAX_VISION_EDGE, recognizeImage } from '../ocr/vi
       } catch (err) {
         console.error('[ocr] offscreen failed:', err);
         sendResponse({ error: errorMessage(err) } satisfies RawOcrResult);
-      }
-    })();
-    return true;
-  });
-
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    const msg = message as { type?: string; payload?: PdfRunPayload } | undefined;
-    if (msg?.type !== 'PDF_RUN') return false;
-    (async () => {
-      try {
-        const payload = msg.payload;
-        if (!payload?.pdfData) throw new Error('No PDF data');
-        sendResponse(await extractPdfText(payload));
-      } catch (err) {
-        console.error('[pdf] offscreen failed:', err);
-        sendResponse({ error: errorMessage(err) });
       }
     })();
     return true;
