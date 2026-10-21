@@ -213,6 +213,7 @@ import { DEFAULT_VISION_MODEL, MAX_VISION_EDGE, recognizeImage } from '../ocr/vi
               tabId: payload.tabId,
               requestId: payload.requestId,
               text: fullText,
+              startedAt: payload.startedAt,
             })
             .catch(() => {});
         };

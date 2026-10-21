@@ -48,6 +48,8 @@ interface OcrBroadcast {
   text?: string;
   entry?: OCRHistoryEntry;
   ms?: number;
+  /** When the job started — lets a popup opened mid-run show the real elapsed time. */
+  startedAt?: number;
 }
 
 interface OcrRunPayload {
@@ -62,6 +64,8 @@ interface OcrRunPayload {
   /** Where streamed partial text should be delivered (image captures only). */
   tabId?: number;
   requestId?: string;
+  /** When the job started, so every surface can show the same elapsed time. */
+  startedAt?: number;
 }
 
 /** Background <-> offscreen payload/response for PDF text extraction. */
@@ -136,7 +140,7 @@ interface SyncStorage extends OCRSettings {}
 // ---------- runtime messages ----------
 type BackgroundRequest =
   | { type: 'OCR_CAPTURE'; area: SelectionArea; dpr: number; language?: string; requestId?: string }
-  | { type: 'OCR_PARTIAL'; tabId?: number; requestId?: string; text: string }
+  | { type: 'OCR_PARTIAL'; tabId?: number; requestId?: string; text: string; startedAt?: number }
   | { type: 'OCR_IMAGE_DATA'; imageData: string; language?: string }
   | { type: 'GET_SETTINGS' }
   | { type: 'SAVE_SETTINGS'; settings: Partial<OCRSettings> }

@@ -55,20 +55,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `${(ms / 1000).toFixed(1)}s`;
   }
 
-  function startLive(label = 'Reading text'): void {
+  function startLive(label = 'Reading text', startedAt?: number): void {
     stopLive();
-    liveStarted = Date.now();
+    liveStarted = startedAt ?? Date.now();
     liveBox.classList.remove('hidden');
     liveText.textContent = '';
-    liveLabel.textContent = `${label}… ${formatElapsed(0)}`;
+    liveLabel.textContent = `${label}… ${formatElapsed(Date.now() - liveStarted)}`;
     // tick every 100ms so the readout has real millisecond resolution
     liveTicker = window.setInterval(() => {
       liveLabel.textContent = `${label}… ${formatElapsed(Date.now() - liveStarted)}`;
     }, 100);
   }
 
-  function updateLive(text: string): void {
-    if (liveBox.classList.contains('hidden')) return;
+  function updateLive(text: string, startedAt?: number): void {
+    // The popup may have been opened after the capture started: adopt the
+    // running job instead of staying blank until the result arrives.
+    if (liveBox.classList.contains('hidden')) startLive('Reading text', startedAt);
     liveText.textContent = text;
     liveText.scrollTop = liveText.scrollHeight;
   }
@@ -190,9 +192,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const msg = message as OcrBroadcast;
     if (!msg?.type) return;
     if (msg.type === 'OCR_START') {
-      startLive('Reading text');
+      startLive('Reading text', msg.startedAt);
     } else if (msg.type === 'OCR_LIVE' && typeof msg.text === 'string') {
-      updateLive(msg.text);
+      updateLive(msg.text, msg.startedAt);
     } else if (msg.type === 'OCR_RESULT' && msg.entry) {
       stopLive();
       showLast(msg.entry, msg.ms);
